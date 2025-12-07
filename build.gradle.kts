@@ -21,5 +21,8 @@ dependencies {
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
+    // TODO remove and move out to a addon cache module
+    implementation("org.ehcache:ehcache:3.11.1")
+
     testImplementation("org.springframework.boot:spring-boot-starter-test")
 }
