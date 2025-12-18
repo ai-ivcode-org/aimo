@@ -13,6 +13,8 @@ dependencies {
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
+    implementation("org.ivcode:spring-boot-starter-ollama:0.1-SNAPSHOT")
+
     // TODO remove and move out to a addon cache module
     implementation("org.ehcache:ehcache:3.11.1")
 

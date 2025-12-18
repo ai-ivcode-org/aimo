@@ -1,5 +1,7 @@
 package org.ivcode.common.data.session
 
+import org.ivcode.common.data.exception.AlreadyExistsException
+
 /**
  * A session is an external cache used to hold session-scoped information.
  *
@@ -27,6 +29,17 @@ interface Session<T> {
      * transform the value depending on the backing store
      */
     fun put(key: String, value: T)
+
+    /**
+     * Store the provided [value] under the specified [key] only if no value is
+     * currently associated with that key.
+     *
+     * @param key non-null string key identifying the session entry
+     * @param value non-null value to store if absent
+     *
+     * @throws AlreadyExistsException if a value is already present for the key
+     */
+    fun putIfAbsent(key: String, value: T)
 
     /**
      * Retrieve the value associated with [key]. Returns null if no value is

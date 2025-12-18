@@ -1,6 +1,7 @@
 package org.ivcode.common.data.storage
 
 import java.io.InputStream
+import org.ivcode.common.data.exception.AlreadyExistsException
 
 /**
  * Abstract storage interface for reading and writing data streams.
@@ -29,19 +30,42 @@ interface Storage {
     fun read(path: String): InputStream?
 
     /**
-     * Write data from the provided [InputStream] to the resource identified by
-     * [path]. Implementations should create any necessary parent containers
-     * (directories, buckets) as appropriate.
+     * Creates a new entry, writing data from the provided [InputStream] to the
+     * resource identified by [path].
      *
-     * Implementations are expected to consume the provided stream. They may
-     * also close the stream when complete; callers should not rely on the
-     * stream remaining open after this call. Any I/O or storage errors should
-     * be propagated as runtime exceptions.
+     * Implementations are expected to consume and close the provided stream. They
+     * may throw runtime exceptions for underlying I/O or permission errors.
      *
      * @param path textual path or identifier where the data should be written
-     * @param data input stream containing the data to write (may be closed by the implementation)
+     * @param data input stream containing the data to write
+     *
+     * @throws AlreadyExistsException if a resource already exists at the specified path
      */
-    fun write(path: String, data: InputStream)
+    fun create(path: String, data: InputStream)
+
+    /**
+     * Replaces an existing resource identified by [path] with data from the
+     * provided [InputStream].
+     *
+     * Implementations are expected to consume and close the provided stream. They
+     * may throw runtime exceptions for underlying I/O or permission errors.
+     *
+     * @param path textual path or identifier of the resource to update
+     * @param data input stream containing the new data
+     */
+    fun update(path: String, data: InputStream)
+
+    /**
+     * Creates or replaces the resource identified by [path] with data from
+     * the provided [InputStream].
+     *
+     * Implementations are expected to consume and close the provided stream. They
+     * may throw runtime exceptions for underlying I/O or permission errors.
+     *
+     * @param path textual path or identifier of the resource to create or update
+     * @param data input stream containing the data
+     */
+    fun upsert(path: String, data: InputStream)
 
     /**
      * Delete the resource identified by [path]. If the resource does not exist
@@ -65,5 +89,7 @@ interface Storage {
      * @param parentPath textual path or identifier representing the directory to list
      * @return list of resource path strings as defined by the implementation
      */
-    fun listPaths(parentPath: String): List<String>
+    fun listPaths(parentPath: String = ""): List<String>
+
+    fun exists(path: String): Boolean
 }

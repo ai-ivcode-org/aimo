@@ -4,7 +4,6 @@ dependencies {
     //testImplementation("org.junit.jupiter:junit-jupiter-api")
 }
 
-
 tasks.test {
     useJUnitPlatform()
 }

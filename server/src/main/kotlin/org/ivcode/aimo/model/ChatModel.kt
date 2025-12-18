@@ -7,8 +7,17 @@ data class ChatRequest (
 
 data class ChatMessage (
     val id: Long,
-    val response: String,
-    val thinking: String,
-    val timestamp: Long,
+    val role: Role,
+    val response: String?,
+    val thinking: String?,
+    val timestamp: Long?,
     val done: Boolean
-)
+) {
+    enum class Role {
+        USER,
+        ASSISTANT,
+        SYSTEM,
+        TOOL
+    }
+}
+
