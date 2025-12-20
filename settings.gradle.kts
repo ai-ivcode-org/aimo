@@ -8,8 +8,4 @@ pluginManagement {
 
 rootProject.name = "aimo"
 
-include(":common")
 include(":server")
-include(":plugin-manager")
-include(":plugin-api")
-include(":test:test-plugin")

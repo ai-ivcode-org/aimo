@@ -1,5 +1,0 @@
-{
-  "id": "test-plugin",
-  "name": "Test Plugin",
-  "entryPoint": "org.ivcode.test.sysinfo.SystemInfoEntryPoint"
-}

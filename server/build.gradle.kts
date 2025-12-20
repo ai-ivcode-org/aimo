@@ -10,14 +10,15 @@ dependencies {
 
     implementation("org.springframework.boot:spring-boot-starter")
     implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
-    // TODO remove and move out to a addon cache module
-    implementation("org.ehcache:ehcache:3.11.1")
 
-    implementation(project(":plugin-api"))
-    implementation(project(":common"))
+    // TODO remove and move out to a addon cache module
+    implementation("org.ehcache:ehcache")
+    implementation("org.ivcode:spring-boot-starter-ollama")
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.junit.jupiter:junit-jupiter-api")
@@ -25,8 +26,4 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
-}
-
-tasks.named("test") {
-    dependsOn(":test:test-plugin:build")
 }
