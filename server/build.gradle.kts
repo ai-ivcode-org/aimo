@@ -15,13 +15,14 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
 
-    // TODO remove and move out to a addon cache module
     implementation("org.ehcache:ehcache")
-    implementation("org.ivcode:spring-boot-starter-ollama")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.junit.jupiter:junit-jupiter-api")
+
+    implementation(project(":ui"))
+    implementation(project(":ollama"))
 }
 
 tasks.test {

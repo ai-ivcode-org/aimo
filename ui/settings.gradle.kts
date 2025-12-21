@@ -6,8 +6,8 @@ pluginManagement {
     }
 }
 
-rootProject.name = "aimo"
+plugins {
+    id("org.gradle.toolchains.foojay-resolver-convention") version "0.8.0"
+}
 
-include(":ui")
-include(":ollama")
-include(":server")
+rootProject.name = "ui"

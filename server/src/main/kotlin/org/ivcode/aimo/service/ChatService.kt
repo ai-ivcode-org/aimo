@@ -47,6 +47,23 @@ class ChatService(
         return session != null
     }
 
+    fun history (
+        chatId: UUID
+    ): List<ChatMessage> {
+        val session = ollamaSessionFactory.createOllamaSession(chatId) ?: throw IllegalStateException("Failed to create Ollama chat session")
+
+        return session.getChatHistory().mapIndexed { index, msg ->
+            ChatMessage (
+                id = index.toLong(),
+                role = msg.role.toChatMessageRole(),
+                response = msg.response,
+                thinking = msg.thinking,
+                timestamp = msg.timestamp,
+                done = true,
+            )
+        }
+    }
+
     private fun OllamaChatMessageRole.toChatMessageRole(): ChatMessage.Role = when (this.roleName) {
         "system" -> ChatMessage.Role.SYSTEM
         "user" -> ChatMessage.Role.USER

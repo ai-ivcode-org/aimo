@@ -5,7 +5,6 @@ build/
 !**/src/test/**/build/
 
 ### IntelliJ IDEA ###
-.idea
 .idea/**
 *.iws
 *.iml
@@ -13,6 +12,8 @@ build/
 out/
 !**/src/main/**/out/
 !**/src/test/**/out/
+!.idea/runConfigurations/
+!.idea/runConfigurations/**
 
 ### Kotlin ###
 .kotlin

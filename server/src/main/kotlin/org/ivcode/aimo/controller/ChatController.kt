@@ -1,5 +1,6 @@
 package org.ivcode.aimo.controller
 
+import org.ivcode.aimo.model.ChatMessage
 import org.ivcode.aimo.model.ChatRequest
 import org.ivcode.aimo.model.NewChatResponse
 import org.ivcode.aimo.service.ChatService
@@ -16,7 +17,7 @@ import java.util.UUID
 
 @RestController
 @RequestMapping("/chat")
-class ChatController(
+class ChatController (
     private val chatService: ChatService,
 ) {
 
@@ -59,10 +60,10 @@ class ChatController(
         )
     }
 
-    @GetMapping("/history/{chatId}")
-    fun getHistory(
+    @GetMapping("/{chatId}/history")
+    fun getHistory (
         @PathVariable chatId: UUID
-    ) {
-
+    ): List<ChatMessage> {
+        return chatService.history(chatId)
     }
 }
