@@ -1,7 +1,8 @@
 // typescript
-import {ChatClientFactory, ChatResponse, ChatRequest, ChatClient} from '../chat-client/ChatClient'
+import {ChatClientFactory} from '../chat-client/ChatClient'
+import {ChatMessage, ChatRequest, ChatClient} from '../chat-client/ChatClientModel'
 import type {ChatHandle} from '../../components/chat/Chat'
-import type {Message} from '../../components/chat/ChatModel'
+//import type {Message} from '../../components/chat/ChatModel'
 import React from "react";
 import {ChatSessionSingleton} from "./ChatSession";
 
@@ -15,10 +16,10 @@ export class ChatController {
         if (baseUrl) this.client = ChatClientFactory(baseUrl)
     }
 
-    attach(chatHandle: React.RefObject<ChatHandle>) {
+    async attach(chatHandle: React.RefObject<ChatHandle>) {
         this.chatHandle = chatHandle
-        this.unsubscribeSessionChange = ChatSessionSingleton.onChange(async (id: string | null) => {
-            if(!id) {
+        this.unsubscribeSessionChange = await ChatSessionSingleton.onChange(async (id: string | null) => {
+            if (!id) {
                 return
             }
 
@@ -27,15 +28,7 @@ export class ChatController {
 
             try {
                 const messages = await this.client.history(id)
-                const messageList: Message[] = messages.map((msg: ChatResponse) => ({
-                    id: msg.id,
-                    sender: msg.role === 'USER' ? 'user' : 'assistant',
-                    text: msg.response,
-                    thinking: msg.thinking,
-                    time: msg.timestamp
-                }))
-
-                this.chatHandle?.current?.setMessages(messageList)
+                this.chatHandle?.current?.setMessages(messages)
             } finally {
                 this.chatHandle?.current.setInputEnabled(inputEnabled)
             }
@@ -44,8 +37,11 @@ export class ChatController {
 
     detach() {
         this.chatHandle = undefined
-        this.unsubscribeSessionChange()
-        this.unsubscribeSessionChange = null
+
+        if(this.unsubscribeSessionChange) {
+            this.unsubscribeSessionChange()
+            this.unsubscribeSessionChange = null
+        }
     }
 
     /**
@@ -55,7 +51,7 @@ export class ChatController {
      * - calls the API with `stream: true`,
      * - appends streamed chunks to the placeholder via the Chat imperative API.
      */
-    onSend = async (userMsg: Message): Promise<ChatResponse | undefined> => {
+    onSend = async (userMsg: ChatMessage): Promise<ChatMessage | undefined> => {
         let id = ChatSessionSingleton.id
         if(!id) {
             const newChat = await this.client.newChat()
@@ -68,7 +64,7 @@ export class ChatController {
         const handle = this.chatHandle?.current
         if (!handle) {
             // no UI attached; still call API but cannot update UI
-            const reqFallback: ChatRequest = {message: userMsg.text, stream: false}
+            const reqFallback: ChatRequest = {message: userMsg.response, stream: false}
             try {
                 return await this.client.chat(id, reqFallback)
             } catch {
@@ -76,27 +72,17 @@ export class ChatController {
             }
         }
 
-        const req: ChatRequest = {message: userMsg.text, stream: true}
+        const req: ChatRequest = {message: userMsg.response, stream: true}
         let isFirstChunk = true
         try {
             // always append incoming chunks to the placeholder message we created above
             return await this.client.chat(id, req, {
-                onMessage: (ev: ChatResponse) => {
+                onMessage: (ev: ChatMessage) => {
                     if (isFirstChunk) {
                         isFirstChunk = false
-                        handle.addMessage({
-                            id: ev.id,
-                            text: ev.response,
-                            sender: 'assistant',
-                            time: ev.timestamp
-                        })
+                        handle.addMessage(ev)
                     } else {
-                        handle.appendMessage({
-                            id: ev.id,
-                            text: ev.response,
-                            sender: 'assistant',
-                            time: ev.timestamp
-                        })
+                        handle.appendMessage(ev)
                     }
                 }
             })
@@ -106,9 +92,10 @@ export class ChatController {
             try {
                 handle.appendMessage({
                     id: Date.now(),
-                    text: `\n\n[Error] ${errText}`,
-                    sender: 'assistant',
-                    time: Date.now()
+                    response: `\n\n[Error] ${errText}`,
+                    role: 'SYSTEM',
+                    timestamp: Date.now(),
+                    done: true
                 })
             } catch {
                 // ignore

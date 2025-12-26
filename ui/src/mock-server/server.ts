@@ -1,7 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import bodyParser from 'body-parser'
-import {ChatRequest, ChatResponse} from "../services/chat-client/ChatClient";
+import {ChatRequest, ChatMessage} from "../services/chat-client/ChatClient";
 import {randomUUID} from "node:crypto";
 
 const app = express()

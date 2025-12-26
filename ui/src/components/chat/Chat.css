@@ -35,12 +35,48 @@
     text-align: left;
 }
 
+
 /* bubble sizing and ensure content inside is left-justified */
 .chat__bubble {
     display: inline-block;
     word-break: break-word;
     text-align: left; /* IMPORTANT: keep content in the bubble left-justified */
     vertical-align: top;
+}
+
+/* thinking bubble */
+.chat__thinking_bubble {
+    font-style: italic;
+    font-size: 12px;
+    color: #888888;
+    padding: 10px 16px;
+    background-color: #f0f0f0;
+    border-radius: 20px;
+    display: inline-block;
+    max-width: 80%;
+}
+.chat__thinking_bubble .title {
+    display: flex;
+    cursor: pointer;
+}
+.chat__thinking_bubble .title .icon {
+    margin: 2px 5px 2px 0;
+}
+.chat__thinking_bubble .title .text {
+    margin: auto 0 auto 0;
+}
+.body {
+    overflow: hidden; /* keep element in DOM for animation */
+    transition: max-height 300ms ease;
+    max-height: 0;
+    pointer-events: none;
+}
+.body--visible {
+    max-height: 1000px; /* large enough for content */
+    pointer-events: auto;
+}
+.body__content {
+    padding: 8px 0;
 }
 
 /* remove per-sender bubble text alignment; keep bubble contents left-justified */

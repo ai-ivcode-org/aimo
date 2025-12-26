@@ -1,41 +1,16 @@
-export interface NewChatResponse {
-    chatId: string
-}
+import {Callback, ChatClient, ChatRequest, ChatMessage, NewChatResponse} from "./ChatClientModel";
 
-export interface ChatRequest {
-    message: string,
-    stream?: boolean
-}
+class ChatClientImpl implements ChatClient {
+    private readonly baseUrl: string;
 
-export interface ChatResponse {
-    id: number
-    // TODO make role an enum?
-    role: string
-    response: string
-    thinking: string
-    timestamp: number
-    done: boolean
-}
+    constructor(baseUrl: string) {
+        this.baseUrl = baseUrl;
+    }
 
-export interface Callback {
-    onMessage: (message: ChatResponse) => void
-}
-
-export interface ChatClient {
-    newChat: () => Promise<NewChatResponse>
-    chat: (chatId: string, request: ChatRequest, callback?: Callback) => Promise<ChatResponse>
-    history: (chatId: string) => Promise<ChatResponse[]>
-}
-
-export const ChatClientFactory = (
-    baseUrl: string
-): ChatClient => {
-    // TODO make sure the baseUrl does not have a trailing slash
-
-    const newChat = async (): Promise<NewChatResponse> => {
+    async newChat(): Promise<NewChatResponse> {
         // POST /chat/new
         const method = 'POST'
-        const url = `${baseUrl}/chat/new`
+        const url = `${this.baseUrl}/chat/new`
 
         const res = await fetch(url, {
             method: method,
@@ -52,14 +27,14 @@ export const ChatClientFactory = (
         return parsed as NewChatResponse
     }
 
-    const chat = async (
+    async chat(
         chatId: string,
         request: ChatRequest,
         callback?: Callback
-    ): Promise<ChatResponse> => {
+    ): Promise<ChatMessage> {
         // POST /chat/{chatId}
         const method = 'POST'
-        const url = `${baseUrl}/chat/${chatId}`
+        const url = `${this.baseUrl}/chat/${chatId}`
 
         if(!chatId) {
             throw new Error('chatId is required')
@@ -77,25 +52,25 @@ export const ChatClientFactory = (
 
             const parsed = JSON.parse(txt)
 
-            return parsed as ChatResponse
+            return parsed as ChatMessage
         }
 
         const reader = res.body.getReader()
         const decoder = new TextDecoder()
         let buffer = ''
-        let lastEvent: ChatResponse = null;
+        let lastEvent: ChatMessage = null;
 
         const emitJson = (jsonStr: string) => {
             if (!jsonStr) return
             try {
-                const response = JSON.parse(jsonStr) as ChatResponse
+                const response = JSON.parse(jsonStr) as ChatMessage
 
                 lastEvent = response
                 callback?.onMessage(response)
             } catch {
                 // TODO add an error callback?
                 // If it isn't a structured MessageEvent, send raw string
-                const ev: ChatResponse = { id: -1, role: "", response: jsonStr, thinking: '', done: true, timestamp: Date.now()}
+                const ev: ChatMessage = { id: -1, role: "SYSTEM", response: jsonStr, thinking: '', done: true, timestamp: Date.now()}
 
                 lastEvent = ev
                 callback?.onMessage(ev)
@@ -172,12 +147,12 @@ export const ChatClientFactory = (
         return lastEvent
     }
 
-    const history = async (
+    async history(
         chatId: string
-    ): Promise<ChatResponse[]> => {
+    ): Promise<ChatMessage[]> {
         // GET /chat/{chatId}/history
         const method = 'GET'
-        const url = `${baseUrl}/chat/${chatId}/history`
+        const url = `${this.baseUrl}/chat/${chatId}/history`
 
         const res = await fetch(url, {
             method: method,
@@ -190,12 +165,12 @@ export const ChatClientFactory = (
 
         const txt = await res.text()
         const parsed = JSON.parse(txt)
-        return parsed as ChatResponse[]
+        return parsed as ChatMessage[]
     }
+}
 
-    return {
-        newChat,
-        chat,
-        history
-    }
+export const ChatClientFactory = (
+    baseUrl: string
+): ChatClient => {
+    return new ChatClientImpl(baseUrl)
 }

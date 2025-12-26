@@ -3,7 +3,10 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeSanitize from 'rehype-sanitize'
 import './Chat.css'
-import {Message} from "./ChatModel";
+import {ChatMessage} from "../../services/chat-client/ChatClientModel";
+import { FaRegLightbulb } from "react-icons/fa";
+import {Message} from "./ChatModels";
+//import {Message} from "./ChatModel";
 
 
 /**
@@ -17,8 +20,8 @@ import {Message} from "./ChatModel";
  * These are added into the internal Map on mount (keeps insertion order).
  */
 interface ChatProps {
-    onSend?: (msg: Message) => void
-    initialMessages?: Message[]
+    onSend?: (msg: ChatMessage) => void
+    initialMessages?: ChatMessage[]
 }
 
 /**
@@ -63,7 +66,7 @@ export type ChatHandle = {
      * - `incoming.text` contains the piece to append (the exact concatenation
      *   semantics are part of the component's contract; callers provide only the text).
      */
-    appendMessage: (incoming: Message) => void
+    appendMessage: (incoming: ChatMessage) => void
 
     /**
      * Insert a new message object into the chat.
@@ -78,9 +81,9 @@ export type ChatHandle = {
      * - This method is the correct entry-point for adding new messages from code;
      *   it is distinct from the component's UI submit flow.
      */
-    addMessage: (msg: Message) => void
+    addMessage: (msg: ChatMessage) => void
 
-    setMessages: (msgs: Message[]) => void
+    setMessages: (msgs: ChatMessage[]) => void
 }
 
 /**
@@ -114,12 +117,20 @@ const Chat = React.forwardRef<ChatHandle, ChatProps>(function Chat({onSend, init
         const m = new Map<number, Message>()
         // seed a welcome message (avoid overwriting if initialMessages include same id)
         m.set(1, {
-            id: 1,
-            text: 'Welcome to **chat**!\n\nYou can use _Markdown_ (e.g. `inline code`, lists, tables).',
-            sender: 'assistant',
-            time: Date.now()
+            message: {
+                id: 1,
+                response: 'Welcome to **chat**!\n\nYou can use _Markdown_ (e.g. `inline code`, lists, tables).',
+                role: 'ASSISTANT',
+                done: true
+            },
+            expandThinking: false
         })
-        for (const im of initialMessages) m.set(im.id, im)
+        for (const im of initialMessages) {
+            m.set(im.id, {
+                message: im,
+                expandThinking: false
+            })
+        }
         return m
     })
 
@@ -215,21 +226,15 @@ const Chat = React.forwardRef<ChatHandle, ChatProps>(function Chat({onSend, init
      * Return:
      * - This callback does not return a value; it enqueues the message into the chat state.
      */
-    const addMessage = useCallback((msg: Message) => {
-        const trimmed = msg.text?.trim()
-
-        const messageWithMeta: Message = {
-            id: msg.id,
-            text: trimmed,
-            sender: msg.sender ?? 'user',
-            time: msg.time ?? Date.now(),
-        }
-
+    const addMessage = useCallback((msg: ChatMessage) => {
         // request a smooth scroll for this update only
         shouldScrollRef.current = true
         setMessages(prev => {
             const next = new Map(prev)
-            next.set(messageWithMeta.id, messageWithMeta)
+            next.set(msg.id, {
+                message: msg,
+                expandThinking: false
+            })
             return next
         })
     }, [])
@@ -257,14 +262,18 @@ const Chat = React.forwardRef<ChatHandle, ChatProps>(function Chat({onSend, init
      * - If no message exists with the provided id, the current implementation
      *   throws an Error to surface logic mistakes early.
      */
-    const appendMessage = useCallback((incoming: Message) => {
+    const appendMessage = useCallback((incoming: ChatMessage) => {
         setMessages(prev => {
             const next = new Map(prev)
             const existing = next.get(incoming.id)
 
             if (existing) {
-                const appendedText = existing.text ? `${existing.text}${incoming.text}` : incoming.text
-                next.set(incoming.id, {...existing, text: appendedText, time: incoming.time ?? existing.time})
+                const appendedThinking = incoming.thinking ? `${existing.message.thinking}${incoming.thinking}` : existing.message.thinking
+                const appendedResponse = incoming.response ? `${existing.message.response}${incoming.response}` : existing.message.response
+                next.set(incoming.id, {
+                    message: {...existing.message, response: appendedResponse, thinking: appendedThinking, timestamp: incoming.timestamp ?? existing.message.timestamp},
+                    expandThinking: existing.expandThinking
+                })
             } else {
                 throw new Error(`Message with id ${incoming.id} does not exist and cannot be appended to.`)
             }
@@ -272,15 +281,17 @@ const Chat = React.forwardRef<ChatHandle, ChatProps>(function Chat({onSend, init
         })
     }, [])
 
-    const _setMessages = useCallback((msgs: Message[]) => {
+    const _setMessages = useCallback((msgs: ChatMessage[]) => {
         // Convert the incoming array of messages into a Map keyed by message.id
         // Preserve the order from the array (insertion order of Map)
         shouldScrollRef.current = true
         setMessages(() => {
             const m = new Map<number, Message>()
             for (const msg of msgs) {
-                const trimmed = msg.text?.trim()
-                m.set(msg.id, {...msg, text: trimmed})
+                m.set(msg.id, {
+                    message: msg,
+                    expandThinking: false
+                })
             }
             return m
         })
@@ -316,7 +327,7 @@ const Chat = React.forwardRef<ChatHandle, ChatProps>(function Chat({onSend, init
         if (!inputEnabled) return
         if (e) e.preventDefault()
         // construct a Message and pass it to addMessage
-        const toAdd: Message = {id: Date.now(), text: input, sender: 'user', time: Date.now()}
+        const toAdd: ChatMessage = {id: Date.now(), response: input, role: 'USER', timestamp: Date.now(), done: true}
         addMessage(toAdd)
         setInput('')
         if (toAdd && onSend) onSend(toAdd)
@@ -338,13 +349,59 @@ const Chat = React.forwardRef<ChatHandle, ChatProps>(function Chat({onSend, init
             <div className="chat__list_container" ref={containerRef}>
                 <div className="chat__list">
                     {messageList.map(m => (
-                        <div key={m.id} className={`chat__message ${m.sender === 'user' ? 'user' : 'assistant'}`}>
+                        <div key={m.message.id} className={`chat__message ${m.message.role === 'USER' ? 'user' : 'assistant'}`}>
+
+                            {m.message.thinking && m.message.thinking !== '' ? (
+                                // show thinking bubble only if non-empty
+                                <div className="chat__thinking_bubble">
+                                    <div
+                                        className="title"
+                                        role="button"
+                                        tabIndex={0}
+                                        aria-expanded={m.expandThinking}
+                                        onClick={() => {
+                                            const id = m.message.id
+                                            setMessages(prev => {
+                                                const next = new Map(prev)
+                                                const existing = next.get(id)
+                                                if (existing) {
+                                                    next.set(id, {...existing, expandThinking: !existing.expandThinking})
+                                                }
+                                                return next
+                                            })
+                                        }}
+                                        onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => {
+                                            if (e.key === 'Enter' || e.key === ' ') {
+                                                e.preventDefault()
+                                                const id = m.message.id
+                                                setMessages(prev => {
+                                                    const next = new Map(prev)
+                                                    const existing = next.get(id)
+                                                    if (existing) {
+                                                        next.set(id, {...existing, expandThinking: !existing.expandThinking})
+                                                    }
+                                                    return next
+                                                })
+                                            }
+                                        }}
+                                    >
+                                        <div className="icon"><FaRegLightbulb /></div>
+                                        <div  className="text"><b>Thinking</b></div>
+                                    </div>
+
+                                    <div className={`body ${m.expandThinking ? 'body--visible' : 'body--hidden'}`} aria-hidden={!m.expandThinking}>
+                                        <div className="body__content">{m.message.thinking}</div>
+                                    </div>
+                                </div>
+                            ) : null}
+
+
                             <div className="chat__bubble">
                                 <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
-                                    {m.text}
+                                    {m.message.response}
                                 </ReactMarkdown>
                             </div>
-                            <div className="chat__time">{new Date(m.time).toLocaleTimeString()}</div>
+                            <div className="chat__time">{new Date(m.message.timestamp).toLocaleTimeString()}</div>
                         </div>
                     ))}
                 </div>

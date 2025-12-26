@@ -40,16 +40,17 @@ export class ChatSession {
         return newId
     }
 
-    clear(push = true): void {
+    async clear(push = true) {
         this.currentChatId = null
         this.updateUrl(null, push)
-        this.emitChange()
+        await this.emitChange()
     }
 
-    onChange(cb: (id: string | null) => Promise<void>): () => void {
+    async onChange(cb: (id: string | null) => Promise<void>): Promise<() => void> {
         this.listeners.add(cb)
         // call immediately with current value
-        cb(this.currentChatId)
+        await cb(this.currentChatId)
+
         return () => this.listeners.delete(cb)
     }
 
@@ -68,6 +69,7 @@ export class ChatSession {
             } else {
                 url.searchParams.delete(this.paramName)
             }
+
             const method = push ? window.history.pushState.bind(window.history) : window.history.replaceState.bind(window.history)
             method({}, '', url.toString())
         } catch {
