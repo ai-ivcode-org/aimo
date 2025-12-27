@@ -4,9 +4,9 @@ import remarkGfm from 'remark-gfm'
 import rehypeSanitize from 'rehype-sanitize'
 import './Chat.css'
 import {ChatMessage} from "../../services/chat-client/ChatClientModel";
-import { FaRegLightbulb } from "react-icons/fa";
+import {FaRegLightbulb} from "react-icons/fa";
 import {Message} from "./ChatModels";
-//import {Message} from "./ChatModel";
+import Loader from "../loader/Loader";
 
 
 /**
@@ -51,6 +51,8 @@ interface ChatProps {
  */
 export type ChatHandle = {
 
+    setBusy: (busy: boolean) => void
+    isBusy: () => boolean
     setInputEnabled: (enabled: boolean) => void
     isInputEnabled: () => boolean
 
@@ -137,6 +139,7 @@ const Chat = React.forwardRef<ChatHandle, ChatProps>(function Chat({onSend, init
     /** Current input value */
     const [input, setInput] = useState('')
     const [inputEnabled, setInputEnabled] = useState(true);
+    const [busy, setBusy] = useState(false);
 
     /** Ref to the messages container for scrolling */
     const containerRef = useRef<HTMLDivElement | null>(null)
@@ -146,7 +149,6 @@ const Chat = React.forwardRef<ChatHandle, ChatProps>(function Chat({onSend, init
     // last scrollTop to detect direction (user scrolled up/down)
     const lastScrollTopRef = useRef<number>(0)
     const BOTTOM_THRESHOLD = 40 // px from bottom considered "at bottom"
-
 
     /**
      * Scroll-to-bottom effect for the messages container.
@@ -165,10 +167,14 @@ const Chat = React.forwardRef<ChatHandle, ChatProps>(function Chat({onSend, init
         }
 
         // run after paint to allow smooth scrolling without a jump
-        requestAnimationFrame(() => {
-            el.scrollTo({top: el.scrollHeight, behavior: 'smooth'})
+        // run after the next paint and ensure layout is stable by nesting rAFs
+        const raf = window.requestAnimationFrame.bind(window)
+        raf(() => {
+            raf(() => {
+                el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+            })
         })
-    }, [messages])
+    }, [messages, busy])
 
 
     // Listen for scroll direction. If user scrolls up -> disable auto-scroll.
@@ -271,7 +277,12 @@ const Chat = React.forwardRef<ChatHandle, ChatProps>(function Chat({onSend, init
                 const appendedThinking = incoming.thinking ? `${existing.message.thinking}${incoming.thinking}` : existing.message.thinking
                 const appendedResponse = incoming.response ? `${existing.message.response}${incoming.response}` : existing.message.response
                 next.set(incoming.id, {
-                    message: {...existing.message, response: appendedResponse, thinking: appendedThinking, timestamp: incoming.timestamp ?? existing.message.timestamp},
+                    message: {
+                        ...existing.message,
+                        response: appendedResponse,
+                        thinking: appendedThinking,
+                        timestamp: incoming.timestamp ?? existing.message.timestamp
+                    },
                     expandThinking: existing.expandThinking
                 })
             } else {
@@ -320,8 +331,10 @@ const Chat = React.forwardRef<ChatHandle, ChatProps>(function Chat({onSend, init
         setMessages: _setMessages,
         // expose send controls so parent can enable/disable sends
         setInputEnabled: (enabled: boolean) => setInputEnabled(enabled),
-        isInputEnabled: () => inputEnabled
-    }), [appendMessage, addMessage, _setMessages, inputEnabled, setInputEnabled])
+        isInputEnabled: () => inputEnabled,
+        setBusy: (b: boolean) => setBusy(b),
+        isBusy: () => busy
+    }), [appendMessage, addMessage, _setMessages, inputEnabled, setInputEnabled, busy, setBusy])
 
     function handleSubmit(e?: React.FormEvent) {
         if (!inputEnabled) return
@@ -349,7 +362,8 @@ const Chat = React.forwardRef<ChatHandle, ChatProps>(function Chat({onSend, init
             <div className="chat__list_container" ref={containerRef}>
                 <div className="chat__list">
                     {messageList.map(m => (
-                        <div key={m.message.id} className={`chat__message ${m.message.role === 'USER' ? 'user' : 'assistant'}`}>
+                        <div key={m.message.id}
+                             className={`chat__message ${m.message.role === 'USER' ? 'user' : 'assistant'}`}>
 
                             {m.message.thinking && m.message.thinking !== '' ? (
                                 // show thinking bubble only if non-empty
@@ -365,7 +379,10 @@ const Chat = React.forwardRef<ChatHandle, ChatProps>(function Chat({onSend, init
                                                 const next = new Map(prev)
                                                 const existing = next.get(id)
                                                 if (existing) {
-                                                    next.set(id, {...existing, expandThinking: !existing.expandThinking})
+                                                    next.set(id, {
+                                                        ...existing,
+                                                        expandThinking: !existing.expandThinking
+                                                    })
                                                 }
                                                 return next
                                             })
@@ -378,23 +395,26 @@ const Chat = React.forwardRef<ChatHandle, ChatProps>(function Chat({onSend, init
                                                     const next = new Map(prev)
                                                     const existing = next.get(id)
                                                     if (existing) {
-                                                        next.set(id, {...existing, expandThinking: !existing.expandThinking})
+                                                        next.set(id, {
+                                                            ...existing,
+                                                            expandThinking: !existing.expandThinking
+                                                        })
                                                     }
                                                     return next
                                                 })
                                             }
                                         }}
                                     >
-                                        <div className="icon"><FaRegLightbulb /></div>
-                                        <div  className="text"><b>Thinking</b></div>
+                                        <div className="icon"><FaRegLightbulb/></div>
+                                        <div className="text"><b>Thinking</b></div>
                                     </div>
 
-                                    <div className={`body ${m.expandThinking ? 'body--visible' : 'body--hidden'}`} aria-hidden={!m.expandThinking}>
+                                    <div className={`body ${m.expandThinking ? 'body--visible' : 'body--hidden'}`}
+                                         aria-hidden={!m.expandThinking}>
                                         <div className="body__content">{m.message.thinking}</div>
                                     </div>
                                 </div>
                             ) : null}
-
 
                             <div className="chat__bubble">
                                 <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
@@ -404,21 +424,25 @@ const Chat = React.forwardRef<ChatHandle, ChatProps>(function Chat({onSend, init
                             <div className="chat__time">{new Date(m.message.timestamp).toLocaleTimeString()}</div>
                         </div>
                     ))}
+
+                    <Loader visible={busy}/>
                 </div>
             </div>
 
             <div className="chat__input_container">
                 <form className="chat__form" onSubmit={handleSubmit}>
                     <textarea
-                      value={input}
-                      onChange={e => setInput(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      placeholder="Ask Anything..."
-                      aria-label="Message"
-                      rows={2}
-                      readOnly={!inputEnabled}
+                        value={input}
+                        onChange={e => setInput(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder="Ask Anything..."
+                        aria-label="Message"
+                        rows={2}
+                        readOnly={!inputEnabled}
                     />
-                    <button type="submit" disabled={!inputEnabled || input.trim() === ''} aria-disabled={!inputEnabled}>Send</button>
+                    <button type="submit" disabled={!inputEnabled || input.trim() === ''}
+                            aria-disabled={!inputEnabled}>Send
+                    </button>
                 </form>
             </div>
         </div>

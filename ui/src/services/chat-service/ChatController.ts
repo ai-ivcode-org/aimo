@@ -65,19 +65,28 @@ export class ChatController {
         if (!handle) {
             // no UI attached; still call API but cannot update UI
             const reqFallback: ChatRequest = {message: userMsg.response, stream: false}
+
+            const isBusy = this.chatHandle?.current?.isBusy() ?? false
+            this.chatHandle.current.setBusy(true)
             try {
                 return await this.client.chat(id, reqFallback)
             } catch {
                 return undefined
+            } finally {
+                this.chatHandle.current.setBusy(isBusy)
             }
         }
 
         const req: ChatRequest = {message: userMsg.response, stream: true}
         let isFirstChunk = true
+        const isBusy = this.chatHandle?.current?.isBusy() ?? false
+        this.chatHandle.current.setBusy(true)
         try {
             // always append incoming chunks to the placeholder message we created above
             return await this.client.chat(id, req, {
                 onMessage: (ev: ChatMessage) => {
+                    this.chatHandle.current.setBusy(isBusy)
+
                     if (isFirstChunk) {
                         isFirstChunk = false
                         handle.addMessage(ev)
@@ -101,6 +110,8 @@ export class ChatController {
                 // ignore
             }
             throw err
+        } finally {
+            this.chatHandle.current.setBusy(isBusy)
         }
     }
 }
