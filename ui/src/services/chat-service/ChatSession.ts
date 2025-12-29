@@ -46,10 +46,10 @@ export class ChatSession {
         await this.emitChange()
     }
 
-    async onChange(cb: (id: string | null) => Promise<void>): Promise<() => void> {
+    onChange(cb: (id: string | null) => Promise<void>): () => void {
         this.listeners.add(cb)
         // call immediately with current value
-        await cb(this.currentChatId)
+        cb(this.currentChatId)
 
         return () => this.listeners.delete(cb)
     }

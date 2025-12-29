@@ -1,8 +1,7 @@
 // typescript
 import {ChatClientFactory} from '../chat-client/ChatClient'
-import {ChatMessage, ChatRequest, ChatClient} from '../chat-client/ChatClientModel'
+import {ChatMessage, ChatRequest, ChatClient} from '../chat-client/ChatClient'
 import type {ChatHandle} from '../../components/chat/Chat'
-//import type {Message} from '../../components/chat/ChatModel'
 import React from "react";
 import {ChatSessionSingleton} from "./ChatSession";
 
@@ -16,21 +15,26 @@ export class ChatController {
         if (baseUrl) this.client = ChatClientFactory(baseUrl)
     }
 
-    async attach(chatHandle: React.RefObject<ChatHandle>) {
+    attach(chatHandle: React.RefObject<ChatHandle>) {
+        if(this.chatHandle) {
+            return
+        }
+        if(this.unsubscribeSessionChange) {
+            this.unsubscribeSessionChange()
+        }
+
         this.chatHandle = chatHandle
-        this.unsubscribeSessionChange = await ChatSessionSingleton.onChange(async (id: string | null) => {
+        this.unsubscribeSessionChange = ChatSessionSingleton.onChange(async (id: string | null) => {
             if (!id) {
                 return
             }
 
-            const inputEnabled = this.chatHandle?.current?.isInputEnabled() ?? true
-            this.chatHandle?.current.setInputEnabled(false)
-
+            const enableInput = this.chatHandle?.current?.disableInput()
             try {
                 const messages = await this.client.history(id)
                 this.chatHandle?.current?.setMessages(messages)
             } finally {
-                this.chatHandle?.current.setInputEnabled(inputEnabled)
+                enableInput()
             }
         })
     }
@@ -66,26 +70,27 @@ export class ChatController {
             // no UI attached; still call API but cannot update UI
             const reqFallback: ChatRequest = {message: userMsg.response, stream: false}
 
-            const isBusy = this.chatHandle?.current?.isBusy() ?? false
-            this.chatHandle.current.setBusy(true)
+            const unsetBusy = this.chatHandle?.current?.busy()
+            const enableInput = this.chatHandle?.current?.disableInput()
             try {
                 return await this.client.chat(id, reqFallback)
             } catch {
                 return undefined
             } finally {
-                this.chatHandle.current.setBusy(isBusy)
+                unsetBusy()
+                enableInput()
             }
         }
 
         const req: ChatRequest = {message: userMsg.response, stream: true}
         let isFirstChunk = true
-        const isBusy = this.chatHandle?.current?.isBusy() ?? false
-        this.chatHandle.current.setBusy(true)
+        const unsetBusy = this.chatHandle?.current?.busy()
+        const enableInput = this.chatHandle?.current?.disableInput()
         try {
             // always append incoming chunks to the placeholder message we created above
             return await this.client.chat(id, req, {
                 onMessage: (ev: ChatMessage) => {
-                    this.chatHandle.current.setBusy(isBusy)
+                    unsetBusy()
 
                     if (isFirstChunk) {
                         isFirstChunk = false
@@ -111,7 +116,8 @@ export class ChatController {
             }
             throw err
         } finally {
-            this.chatHandle.current.setBusy(isBusy)
+            unsetBusy()
+            enableInput()
         }
     }
 }

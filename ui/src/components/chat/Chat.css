@@ -11,7 +11,7 @@
 }
 
 .chat__list {
-    max-width: 800px;
+    max-width: 1200px;
     margin: 0 auto;
 }
 
@@ -50,8 +50,8 @@
     font-size: 12px;
     color: #888888;
     padding: 10px 16px;
-    background-color: #f0f0f0;
-    border-radius: 20px;
+    background-color: var(--palette-background-paper);
+    border-radius: var(--shape-border-radius);
     display: inline-block;
     max-width: 80%;
 }
@@ -101,11 +101,11 @@
 
 /* bubble styles for my messages */
 .chat__message.user .chat__bubble {
-    background-color: #333333; /* light green bubble */
-    border-radius: 20px; /* rounded corners with a "tail" */
+    background-color: var(--palette-background-paper);
+    border-radius: var(--shape-border-radius);
     padding: 0 16px;
-    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1); /* subtle shadow */
     max-width: 80%;
+    margin-bottom: 8px;
 }
 
 /* bubble styles for other messages */
@@ -116,13 +116,16 @@
 form.chat__form {
     display: flex;
     align-items: center;
-    background-color: #333333;
-    border-radius: 8px;
+    background-color: var(--palette-background-paper);
+    border-radius: var(--shape-border-radius);
 
-    max-width: 800px;
+    max-width: 1200px;
     margin: 16px auto;
 }
 
+.chat__input_container {
+    background-color: var(--palette-background-default);
+}
 form.chat__form textarea {
     field-sizing: content;
     flex: 1;
@@ -130,7 +133,7 @@ form.chat__form textarea {
     padding: 10px;
     border: none;
     font-size: 1rem;
-    color: #ffffff;
+    color: var(--palette-text-primary);
     background-color: inherit;
     outline: none; /* remove default focus outline for pointer interactions */
     box-shadow: none;

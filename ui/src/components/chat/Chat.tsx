@@ -3,11 +3,13 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeSanitize from 'rehype-sanitize'
 import './Chat.css'
-import {ChatMessage} from "../../services/chat-client/ChatClientModel";
-import {FaRegLightbulb} from "react-icons/fa";
+import {ChatMessage} from "../../services/chat-client/ChatClient";
 import {Message} from "./ChatModels";
-import Loader from "../loader/Loader";
-
+import Loader from "../loader/Loader"
+import TipsAndUpdatesOutlined from '@mui/icons-material/TipsAndUpdatesOutlined';
+import {Button} from "@mui/material";
+import {useTheme} from "@mui/material/styles";
+import {UnsetCountCaller} from "../../utils/UnsetCountCaller";
 
 /**
  * Props for the Chat component.
@@ -50,11 +52,8 @@ interface ChatProps {
  *   implementation details; rely on the behavioral contract above when using them.
  */
 export type ChatHandle = {
-
-    setBusy: (busy: boolean) => void
-    isBusy: () => boolean
-    setInputEnabled: (enabled: boolean) => void
-    isInputEnabled: () => boolean
+    busy: () => (() => void)
+    disableInput: () => (() => void)
 
     /**
      * Append text to an existing message.
@@ -140,6 +139,8 @@ const Chat = React.forwardRef<ChatHandle, ChatProps>(function Chat({onSend, init
     const [input, setInput] = useState('')
     const [inputEnabled, setInputEnabled] = useState(true);
     const [busy, setBusy] = useState(false);
+
+    var latestEnabled = inputEnabled;
 
     /** Ref to the messages container for scrolling */
     const containerRef = useRef<HTMLDivElement | null>(null)
@@ -309,6 +310,18 @@ const Chat = React.forwardRef<ChatHandle, ChatProps>(function Chat({onSend, init
     }, [])
 
 
+    const inputEnabledCounter = useRef( new UnsetCountCaller(() => {
+        setInputEnabled(false)
+    }, () => {
+        setInputEnabled(true)
+    }));
+
+    const busyCounter = useRef( new UnsetCountCaller(() => {
+        setBusy(true)
+    }, () => {
+        setBusy(false)
+    }));
+
     /**
      * Expose the component's imperative API to a parent via `ref`.
      *
@@ -329,12 +342,9 @@ const Chat = React.forwardRef<ChatHandle, ChatProps>(function Chat({onSend, init
         appendMessage: appendMessage,
         addMessage: addMessage,
         setMessages: _setMessages,
-        // expose send controls so parent can enable/disable sends
-        setInputEnabled: (enabled: boolean) => setInputEnabled(enabled),
-        isInputEnabled: () => inputEnabled,
-        setBusy: (b: boolean) => setBusy(b),
-        isBusy: () => busy
-    }), [appendMessage, addMessage, _setMessages, inputEnabled, setInputEnabled, busy, setBusy])
+        disableInput: () => inputEnabledCounter.current.doSet(),
+        busy: () => busyCounter.current.doSet(),
+    }), [appendMessage, addMessage, _setMessages, inputEnabledCounter, busyCounter])
 
     function handleSubmit(e?: React.FormEvent) {
         if (!inputEnabled) return
@@ -357,9 +367,10 @@ const Chat = React.forwardRef<ChatHandle, ChatProps>(function Chat({onSend, init
     // create an ordered array for rendering from the Map values
     const messageList = Array.from(messages.values())
 
+    const theme = useTheme()
     return (
         <div className="chat">
-            <div className="chat__list_container" ref={containerRef}>
+            <div className="chat__list_container" ref={containerRef} style={ { marginTop: theme.mixins.toolbar.minHeight} }>
                 <div className="chat__list">
                     {messageList.map(m => (
                         <div key={m.message.id}
@@ -405,7 +416,7 @@ const Chat = React.forwardRef<ChatHandle, ChatProps>(function Chat({onSend, init
                                             }
                                         }}
                                     >
-                                        <div className="icon"><FaRegLightbulb/></div>
+                                        <div className="icon"><TipsAndUpdatesOutlined sx={{ fontSize: 20 }}/></div>
                                         <div className="text"><b>Thinking</b></div>
                                     </div>
 
@@ -424,7 +435,6 @@ const Chat = React.forwardRef<ChatHandle, ChatProps>(function Chat({onSend, init
                             <div className="chat__time">{new Date(m.message.timestamp).toLocaleTimeString()}</div>
                         </div>
                     ))}
-
                     <Loader visible={busy}/>
                 </div>
             </div>
@@ -438,11 +448,8 @@ const Chat = React.forwardRef<ChatHandle, ChatProps>(function Chat({onSend, init
                         placeholder="Ask Anything..."
                         aria-label="Message"
                         rows={2}
-                        readOnly={!inputEnabled}
                     />
-                    <button type="submit" disabled={!inputEnabled || input.trim() === ''}
-                            aria-disabled={!inputEnabled}>Send
-                    </button>
+                    <Button variant="contained" type="submit" onClick={handleSubmit} disabled={!inputEnabled}>Submit</Button>
                 </form>
             </div>
         </div>

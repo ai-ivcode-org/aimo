@@ -1,174 +1,98 @@
-import {Callback, ChatClient, ChatRequest, ChatMessage, NewChatResponse} from "./ChatClientModel";
+import {ChatClientImpl} from "./ChatClientImpl";
 
-class ChatClientImpl implements ChatClient {
-    private readonly baseUrl: string;
-
-    constructor(baseUrl: string) {
-        this.baseUrl = baseUrl;
-    }
-
-    async newChat(): Promise<NewChatResponse> {
-        // POST /chat/new
-        const method = 'POST'
-        const url = `${this.baseUrl}/chat/new`
-
-        const res = await fetch(url, {
-            method: method,
-            headers: { 'Content-Type': 'application/json' }
-        })
-
-        if(!res.ok) {
-            throw new Error(`Failed to create new chat: ${res.status} ${res.statusText}`)
-        }
-
-        const txt = await res.text()
-        const parsed = JSON.parse(txt)
-
-        return parsed as NewChatResponse
-    }
-
-    async chat(
-        chatId: string,
-        request: ChatRequest,
-        callback?: Callback
-    ): Promise<ChatMessage> {
-        // POST /chat/{chatId}
-        const method = 'POST'
-        const url = `${this.baseUrl}/chat/${chatId}`
-
-        if(!chatId) {
-            throw new Error('chatId is required')
-        }
-
-        const res = await fetch(url, {
-            method: method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(request)
-        })
-
-        if (!res.body) {
-            // No stream support; try to parse whole body as JSON
-            const txt = await res.text()
-
-            const parsed = JSON.parse(txt)
-
-            return parsed as ChatMessage
-        }
-
-        const reader = res.body.getReader()
-        const decoder = new TextDecoder()
-        let buffer = ''
-        let lastEvent: ChatMessage = null;
-
-        const emitJson = (jsonStr: string) => {
-            if (!jsonStr) return
-            try {
-                const response = JSON.parse(jsonStr) as ChatMessage
-
-                lastEvent = response
-                callback?.onMessage(response)
-            } catch {
-                // TODO add an error callback?
-                // If it isn't a structured MessageEvent, send raw string
-                const ev: ChatMessage = { id: -1, role: "SYSTEM", response: jsonStr, thinking: '', done: true, timestamp: Date.now()}
-
-                lastEvent = ev
-                callback?.onMessage(ev)
-            }
-        }
-
-        // Read stream chunks and attempt two strategies:
-        // 1) NDJSON / newline-delimited objects
-        // 2) Concatenated JSON objects using brace counting with basic string/escape handling
-        let done = false
-        while (!done) {
-            const { value, done: streamDone } = await reader.read()
-            done = !!streamDone
-            buffer += value ? decoder.decode(value, { stream: true }) : ''
-
-            // Handle newline-delimited objects first
-            let nlIndex: number
-            while ((nlIndex = buffer.indexOf('\n')) >= 0) {
-                const line = buffer.slice(0, nlIndex).trim()
-                buffer = buffer.slice(nlIndex + 1)
-                if (line) emitJson(line)
-            }
-
-            // Attempt to extract concatenated objects from remaining buffer
-            // Basic state machine to handle strings and escapes so braces inside strings don't break parsing
-            let braceDepth = 0
-            let inString = false
-            let escape = false
-            let start = -1
-            for (let i = 0; i < buffer.length; i++) {
-                const ch = buffer[i]
-                if (escape) {
-                    escape = false
-                    continue
-                }
-                if (ch === '\\') {
-                    escape = true
-                    continue
-                }
-                if (ch === '"' ) {
-                    inString = !inString
-                    continue
-                }
-                if (inString) continue
-                if (ch === '{') {
-                    if (braceDepth === 0) start = i
-                    braceDepth++
-                } else if (ch === '}') {
-                    braceDepth--
-                    if (braceDepth === 0 && start >= 0) {
-                        const objStr = buffer.slice(start, i + 1)
-                        emitJson(objStr)
-                        buffer = buffer.slice(i + 1)
-                        // reset scanner to beginning of new buffer
-                        i = -1
-                        start = -1
-                    }
-                }
-            }
-        }
-
-        // After stream end, try to parse any leftover content
-        const leftover = buffer.trim()
-        if (leftover) {
-            // Try newline split first, then fallback to single JSON parse
-            const parts = leftover.split('\n').map(p => p.trim()).filter(Boolean)
-            if (parts.length > 1) {
-                parts.forEach(emitJson)
-            } else {
-                emitJson(leftover)
-            }
-        }
-
-        return lastEvent
-    }
-
-    async history(
-        chatId: string
-    ): Promise<ChatMessage[]> {
-        // GET /chat/{chatId}/history
-        const method = 'GET'
-        const url = `${this.baseUrl}/chat/${chatId}/history`
-
-        const res = await fetch(url, {
-            method: method,
-            headers: { 'Content-Type': 'application/json' }
-        })
-
-        if(!res.ok) {
-            throw new Error(`Failed to fetch chat history: ${res.status} ${res.statusText}`)
-        }
-
-        const txt = await res.text()
-        const parsed = JSON.parse(txt)
-        return parsed as ChatMessage[]
-    }
+/**
+ * Response returned when creating a new chat session.
+ *
+ * @interface NewChatResponse
+ * @property {string} chatId - Unique identifier for the newly created chat session.
+ */
+export interface NewChatResponse {
+    chatId: string
 }
 
+/**
+ * Represents a request sent to the chat service.
+ *
+ * @interface ChatRequest
+ * @property {string} message - The user-visible message or prompt to send to the chat backend.
+ * @property {boolean} [stream] - When true, indicates the client expects streaming/incremental responses.
+ */
+export interface ChatRequest {
+    message: string,
+    stream?: boolean
+}
+
+/**
+ * Named union type for roles that may originate a chat message.
+ * Keeping this as a named export makes it easy to reuse across the codebase.
+ *
+ * @typedef {'USER' | 'ASSISTANT' | 'SYSTEM' | 'TOOL'} Role
+ */
+export type Role = 'USER' | 'ASSISTANT' | 'SYSTEM' | 'TOOL'
+
+/**
+ * Represents a single message or event in a chat conversation.
+ *
+ * @interface ChatMessage
+ * @property {number} id - Monotonically increasing identifier for the message/event.
+ * @property {Role} role - Originator of the message (user, assistant, system, or tool).
+ * @property {string} [response] - Finalized response text for this message when available.
+ * @property {string} [thinking] - Partial/in-progress content (used when streaming incremental updates).
+ * @property {number} [timestamp] - Unix epoch milliseconds when the message/event was created.
+ * @property {boolean} done - True when this message is complete/final (no more incremental updates expected).
+ */
+export interface ChatMessage {
+    id: number
+    role: Role
+    response?: string
+    thinking?: string
+    timestamp?: number
+    done: boolean
+}
+
+
+
+/**
+ * Callback container used for streaming or incremental delivery from the chat client.
+ *
+ * Implementers should handle incoming partial or final ChatMessage objects in `onMessage`.
+ *
+ * @interface Callback
+ * @property {(message: ChatMessage) => void} onMessage - Invoked for each message or incremental chunk produced by the server.
+ */
+export interface Callback {
+    onMessage: (message: ChatMessage) => void
+}
+
+/**
+ * High-level client interface for interacting with the chat backend.
+ *
+ * Implementations should provide the following methods:
+ *  - newChat: create a new chat session and return its id
+ *  - chat: send a message/request to an existing chat session (optionally stream results via Callback)
+ *  - history: retrieve the message history for a chat session
+ *
+ * @interface ChatClient
+ * @property {() => Promise<NewChatResponse>} newChat - Create a new chat session. Resolves with NewChatResponse containing chatId.
+ * @property {(chatId: string, request: ChatRequest, callback?: Callback) => Promise<ChatMessage>} chat - Send a ChatRequest and optionally receive streaming updates via callback.
+ * @property {(chatId: string) => Promise<ChatMessage[]>} history - Fetch the message history for chatId.
+ */
+export interface ChatClient {
+    newChat: () => Promise<NewChatResponse>
+    chat: (chatId: string, request: ChatRequest, callback?: Callback) => Promise<ChatMessage>
+    history: (chatId: string) => Promise<ChatMessage[]>
+}
+
+
+/**
+ * Factory function that returns a configured ChatClient instance.
+ *
+ * @param {string} baseUrl - The base URL for the chat backend (e.g. `"/api"` or `"http://localhost:8080"`).
+ * @returns {ChatClient} A ChatClient implementation bound to the provided base URL.
+ *
+ * @example
+ * const client = ChatClientFactory('/api/chat');
+ */
 export const ChatClientFactory = (
     baseUrl: string
 ): ChatClient => {
