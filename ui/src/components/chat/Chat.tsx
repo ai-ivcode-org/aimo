@@ -116,16 +116,6 @@ const Chat = React.forwardRef<ChatHandle, ChatProps>(function Chat({onSend, init
     /** Messages displayed in the chat */
     const [messages, setMessages] = useState<Map<number, Message>>(() => {
         const m = new Map<number, Message>()
-        // seed a welcome message (avoid overwriting if initialMessages include same id)
-        m.set(1, {
-            message: {
-                id: 1,
-                response: 'Welcome to **chat**!\n\nYou can use _Markdown_ (e.g. `inline code`, lists, tables).',
-                role: 'ASSISTANT',
-                done: true
-            },
-            expandThinking: false
-        })
         for (const im of initialMessages) {
             m.set(im.id, {
                 message: im,
@@ -370,37 +360,27 @@ const Chat = React.forwardRef<ChatHandle, ChatProps>(function Chat({onSend, init
     const theme = useTheme()
     return (
         <div className="chat">
-            <div className="chat__list_container" ref={containerRef} style={ { marginTop: theme.mixins.toolbar.minHeight} }>
-                <div className="chat__list">
-                    {messageList.map(m => (
-                        <div key={m.message.id}
-                             className={`chat__message ${m.message.role === 'USER' ? 'user' : 'assistant'}`}>
 
-                            {m.message.thinking && m.message.thinking !== '' ? (
-                                // show thinking bubble only if non-empty
-                                <div className="chat__thinking_bubble">
-                                    <div
-                                        className="title"
-                                        role="button"
-                                        tabIndex={0}
-                                        aria-expanded={m.expandThinking}
-                                        onClick={() => {
-                                            const id = m.message.id
-                                            setMessages(prev => {
-                                                const next = new Map(prev)
-                                                const existing = next.get(id)
-                                                if (existing) {
-                                                    next.set(id, {
-                                                        ...existing,
-                                                        expandThinking: !existing.expandThinking
-                                                    })
-                                                }
-                                                return next
-                                            })
-                                        }}
-                                        onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => {
-                                            if (e.key === 'Enter' || e.key === ' ') {
-                                                e.preventDefault()
+            {messages.size <= 0 ? (
+                <div className="chat__list_container" ref={containerRef} style={ { marginTop: theme.mixins.toolbar.minHeight} }>
+                    Splash Screen
+                </div>
+            ) : (
+                <div className="chat__list_container" ref={containerRef} style={ { marginTop: theme.mixins.toolbar.minHeight} }>
+                    <div className="chat__list">
+                        {messageList.map(m => (
+                            <div key={m.message.id}
+                                 className={`chat__message ${m.message.role === 'USER' ? 'user' : 'assistant'}`}>
+
+                                {m.message.thinking && m.message.thinking !== '' ? (
+                                    // show thinking bubble only if non-empty
+                                    <div className="chat__thinking_bubble">
+                                        <div
+                                            className="title"
+                                            role="button"
+                                            tabIndex={0}
+                                            aria-expanded={m.expandThinking}
+                                            onClick={() => {
                                                 const id = m.message.id
                                                 setMessages(prev => {
                                                     const next = new Map(prev)
@@ -413,31 +393,49 @@ const Chat = React.forwardRef<ChatHandle, ChatProps>(function Chat({onSend, init
                                                     }
                                                     return next
                                                 })
-                                            }
-                                        }}
-                                    >
-                                        <div className="icon"><TipsAndUpdatesOutlined sx={{ fontSize: 20 }}/></div>
-                                        <div className="text"><b>Thinking</b></div>
-                                    </div>
+                                            }}
+                                            onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => {
+                                                if (e.key === 'Enter' || e.key === ' ') {
+                                                    e.preventDefault()
+                                                    const id = m.message.id
+                                                    setMessages(prev => {
+                                                        const next = new Map(prev)
+                                                        const existing = next.get(id)
+                                                        if (existing) {
+                                                            next.set(id, {
+                                                                ...existing,
+                                                                expandThinking: !existing.expandThinking
+                                                            })
+                                                        }
+                                                        return next
+                                                    })
+                                                }
+                                            }}
+                                        >
+                                            <div className="icon"><TipsAndUpdatesOutlined sx={{ fontSize: 20 }}/></div>
+                                            <div className="text"><b>Thinking</b></div>
+                                        </div>
 
-                                    <div className={`body ${m.expandThinking ? 'body--visible' : 'body--hidden'}`}
-                                         aria-hidden={!m.expandThinking}>
-                                        <div className="body__content">{m.message.thinking}</div>
+                                        <div className={`body ${m.expandThinking ? 'body--visible' : 'body--hidden'}`}
+                                             aria-hidden={!m.expandThinking}>
+                                            <div className="body__content">{m.message.thinking}</div>
+                                        </div>
                                     </div>
+                                ) : null}
+
+                                <div className="chat__bubble">
+                                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
+                                        {m.message.response}
+                                    </ReactMarkdown>
                                 </div>
-                            ) : null}
-
-                            <div className="chat__bubble">
-                                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
-                                    {m.message.response}
-                                </ReactMarkdown>
+                                <div className="chat__time">{new Date(m.message.timestamp).toLocaleTimeString()}</div>
                             </div>
-                            <div className="chat__time">{new Date(m.message.timestamp).toLocaleTimeString()}</div>
-                        </div>
-                    ))}
-                    <Loader visible={busy}/>
+                        ))}
+                        <Loader visible={busy}/>
+                    </div>
                 </div>
-            </div>
+            ) }
+
 
             <div className="chat__input_container">
                 <form className="chat__form" onSubmit={handleSubmit}>

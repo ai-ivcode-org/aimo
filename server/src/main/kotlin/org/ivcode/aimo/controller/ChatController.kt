@@ -2,6 +2,7 @@ package org.ivcode.aimo.controller
 
 import org.ivcode.aimo.model.ChatMessage
 import org.ivcode.aimo.model.ChatRequest
+import org.ivcode.aimo.model.ChatSession
 import org.ivcode.aimo.model.NewChatResponse
 import org.ivcode.aimo.service.ChatService
 import org.springframework.http.MediaType
@@ -59,6 +60,9 @@ class ChatController (
             chatId = chatService.createChat().toString()
         )
     }
+
+    @GetMapping("/")
+    fun getChatSessions (): List<ChatSession> = chatService.getSessions()
 
     @GetMapping("/{chatId}/history")
     fun getHistory (

@@ -1,5 +1,7 @@
 package org.ivcode.aimo.model
 
+import java.util.UUID
+
 data class NewChatResponse (
     val chatId: String
 )
@@ -24,3 +26,8 @@ data class ChatMessage (
         TOOL
     }
 }
+
+data class ChatSession (
+    val id: UUID,
+    val title: String?
+)

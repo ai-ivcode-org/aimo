@@ -2,6 +2,7 @@ package org.ivcode.ai.ollama.agent
 
 import io.github.ollama4j.Ollama
 import org.ivcode.ai.ollama.core.OllamaFactory
+import org.ivcode.ai.ollama.history.OllamaChatSessionInfo
 import org.ivcode.ai.ollama.history.OllamaHistoryManagerFactory
 import org.ivcode.ai.ollama.system.OllamaSystemMessageFactory
 import java.util.UUID
@@ -15,6 +16,9 @@ class Ollama4jChatAgentFactory (
 
     private val ollama: Ollama = ollamaFactory.createOllama()
 
+    override fun getChatSessionInfos(): List<OllamaChatSessionInfo> =
+        historyManagerFactory.getChatSessionInfos()
+
     override fun createOllamaSession(): OllamaChatAgent {
         val historyManager = historyManagerFactory.createHistoryManager()
         val systemMessages = systemMessageFactory.createSystemMessages()
@@ -27,7 +31,7 @@ class Ollama4jChatAgentFactory (
         )
     }
 
-    override fun createOllamaSession(historyId: UUID): OllamaChatAgent? {
+    override fun createOllamaSession (historyId: UUID): OllamaChatAgent? {
         val historyManager = historyManagerFactory.loadHistoryManager(historyId) ?: return null
         val systemMessages = systemMessageFactory.createSystemMessages()
 

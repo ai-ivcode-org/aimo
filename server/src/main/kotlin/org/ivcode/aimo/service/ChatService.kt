@@ -5,6 +5,7 @@ import io.github.ollama4j.models.chat.OllamaChatMessageRole
 import org.ivcode.ai.ollama.agent.OllamaChatAgentFactory
 import org.ivcode.aimo.model.ChatMessage
 import org.ivcode.aimo.model.ChatRequest
+import org.ivcode.aimo.model.ChatSession
 import org.springframework.stereotype.Service
 import java.io.OutputStream
 import java.util.UUID
@@ -16,6 +17,13 @@ class ChatService(
 ) {
 
     fun createChat (): UUID = ollamaSessionFactory.createOllamaSession().getSessionId()
+
+    fun getSessions (): List<ChatSession> = ollamaSessionFactory.getChatSessionInfos().map { info ->
+        ChatSession (
+            id = info.id,
+            title = info.title,
+        )
+    }
 
     fun chat (
         chatId: UUID,

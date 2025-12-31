@@ -12,14 +12,17 @@ import IconButton from '@mui/material/IconButton';
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
-import InboxIcon from '@mui/icons-material/MoveToInbox';
-import MailIcon from '@mui/icons-material/Mail';
+import TryIcon from '@mui/icons-material/Try';
+import HistoryIcon from '@mui/icons-material/History';
+import {Collapse, Tooltip} from "@mui/material";
+import { historyService, HistoryEntry } from "../../services/history-service/HistoryService";
+import { ChatSessionSingleton } from '../../services/chat-service/ChatSession';
+import {useEffect} from "react";
 
-const drawerWidth = 240;
+const drawerWidth = 260;
 
 const openedMixin = (theme: Theme): CSSObject => ({
     width: drawerWidth,
@@ -108,7 +111,23 @@ interface SideDrawerProps {
 
 export default function SideDrawer({ children }: SideDrawerProps) {
     const theme = useTheme();
+
     const [open, setOpen] = React.useState(false);
+    const [historyOpen, setHistoryOpen] = React.useState(false);
+    const [sessionId, setSessionId] = React.useState<string | null>( ChatSessionSingleton.id );
+
+    const [historyItems, setHistoryItems] = React.useState<HistoryEntry[]>([]);
+
+    useEffect(() => {
+        return historyService.subscribe( items => {
+            setHistoryItems(items);
+        })
+    }, []);
+    useEffect(() => {
+        return ChatSessionSingleton.onChange(async (id: string | null) => {
+            setSessionId(id);
+        })
+    }, []);
 
     const handleDrawerOpen = () => {
         setOpen(true);
@@ -149,108 +168,62 @@ export default function SideDrawer({ children }: SideDrawerProps) {
                     </IconButton>
                 </DrawerHeader>
                 <Divider />
-                <List>
-                    {['Inbox', 'Starred', 'Send email', 'Drafts'].map((text, index) => (
-                        <ListItem key={text} disablePadding sx={{ display: 'block' }}>
-                            <ListItemButton
-                                sx={[
-                                    {
-                                        minHeight: 48,
-                                        px: 2.5,
-                                    },
-                                    open
-                                        ? {
-                                            justifyContent: 'initial',
-                                        }
-                                        : {
-                                            justifyContent: 'center',
-                                        },
-                                ]}
-                            >
-                                <ListItemIcon
-                                    sx={[
-                                        {
-                                            minWidth: 0,
-                                            justifyContent: 'center',
-                                        },
-                                        open
-                                            ? {
-                                                mr: 3,
-                                            }
-                                            : {
-                                                mr: 'auto',
-                                            },
-                                    ]}
-                                >
-                                    {index % 2 === 0 ? <InboxIcon /> : <MailIcon />}
-                                </ListItemIcon>
-                                <ListItemText
-                                    primary={text}
-                                    sx={[
-                                        open
-                                            ? {
-                                                opacity: 1,
-                                            }
-                                            : {
-                                                opacity: 0,
-                                            },
-                                    ]}
-                                />
-                            </ListItemButton>
-                        </ListItem>
-                    ))}
+                <List
+                    sx={{ width: '100%', maxWidth: 360, bgcolor: 'background.paper' }}
+                    component="nav"
+                    aria-labelledby="nested-list-subheader"
+                >
+                    <Tooltip title={"New Chat"} placement="right" disableHoverListener={open} disableFocusListener={open}>
+                        <ListItemButton onClick={ async () => { await ChatSessionSingleton.clear(false) } }>
+                            <ListItemIcon>
+                                <TryIcon />
+                            </ListItemIcon>
+                            <ListItemText primary="New Chat" />
+                        </ListItemButton>
+                    </Tooltip>
                 </List>
                 <Divider />
-                <List>
-                    {['All mail', 'Trash', 'Spam'].map((text, index) => (
-                        <ListItem key={text} disablePadding sx={{ display: 'block' }}>
-                            <ListItemButton
-                                sx={[
-                                    {
-                                        minHeight: 48,
-                                        px: 2.5,
-                                    },
-                                    open
-                                        ? {
-                                            justifyContent: 'initial',
-                                        }
-                                        : {
-                                            justifyContent: 'center',
-                                        },
-                                ]}
-                            >
-                                <ListItemIcon
-                                    sx={[
-                                        {
-                                            minWidth: 0,
-                                            justifyContent: 'center',
-                                        },
-                                        open
-                                            ? {
-                                                mr: 3,
-                                            }
-                                            : {
-                                                mr: 'auto',
-                                            },
-                                    ]}
-                                >
-                                    {index % 2 === 0 ? <InboxIcon /> : <MailIcon />}
+                <List
+                    sx={{ width: '100%', maxWidth: 360, bgcolor: 'background.paper' }}
+                    component="nav"
+                    aria-labelledby="nested-list-subheader"
+                >
+                    { open ? (
+                        <ListItemButton onClick={() => {
+                            setHistoryOpen(!historyOpen)
+                        }}>
+                            <ListItemIcon>
+                                <HistoryIcon />
+                            </ListItemIcon>
+                            <ListItemText primary="History" />
+                        </ListItemButton>
+                    ) : (
+                        <Tooltip title={"History"} placement="right">
+                            <ListItemButton onClick={() => {
+                                setOpen(true);
+                                setHistoryOpen(true);
+                            }}>
+                                <ListItemIcon>
+                                    <HistoryIcon />
                                 </ListItemIcon>
+                                <ListItemText primary="History" />
+                            </ListItemButton>
+                        </Tooltip>
+                    )}
+                    <Collapse in={open && historyOpen} timeout="auto" unmountOnExit>
+                        {historyItems.map(item => (
+                            <ListItemButton
+                                key={item.id}
+                                sx={{ pl: 2 }}
+                                onClick={ async () => { await ChatSessionSingleton.setId(item.id, false) } }
+                                selected={sessionId === item.id}
+                            >
                                 <ListItemText
-                                    primary={text}
-                                    sx={[
-                                        open
-                                            ? {
-                                                opacity: 1,
-                                            }
-                                            : {
-                                                opacity: 0,
-                                            },
-                                    ]}
+                                    primary={item.title ?? `Item ${item.id}`}
                                 />
                             </ListItemButton>
-                        </ListItem>
-                    ))}
+                        ))}
+                    </Collapse>
                 </List>
             </Drawer>
             <Box component="main" sx={{ flexGrow: 1, p: 0}} >

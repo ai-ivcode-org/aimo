@@ -50,6 +50,10 @@ export interface ChatMessage {
     done: boolean
 }
 
+export interface ChatSession {
+    id: string
+    title?: string
+}
 
 
 /**
@@ -81,20 +85,11 @@ export interface ChatClient {
     newChat: () => Promise<NewChatResponse>
     chat: (chatId: string, request: ChatRequest, callback?: Callback) => Promise<ChatMessage>
     history: (chatId: string) => Promise<ChatMessage[]>
+    getChatSessions: () => Promise<ChatSession[]>
 }
 
-
+// TODO make the baseUrl configurable
 /**
- * Factory function that returns a configured ChatClient instance.
- *
- * @param {string} baseUrl - The base URL for the chat backend (e.g. `"/api"` or `"http://localhost:8080"`).
- * @returns {ChatClient} A ChatClient implementation bound to the provided base URL.
- *
- * @example
- * const client = ChatClientFactory('/api/chat');
+ * Instance of the ChatClient for use throughout the application.
  */
-export const ChatClientFactory = (
-    baseUrl: string
-): ChatClient => {
-    return new ChatClientImpl(baseUrl)
-}
+export const chatClient: ChatClient = new ChatClientImpl('http://localhost:8080')

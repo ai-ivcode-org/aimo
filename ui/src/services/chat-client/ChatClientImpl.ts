@@ -1,10 +1,30 @@
-import {Callback, ChatClient, ChatRequest, ChatMessage, NewChatResponse} from "./ChatClient";
+import {Callback, ChatClient, ChatRequest, ChatMessage, NewChatResponse, ChatSession} from "./ChatClient";
 
 export class ChatClientImpl implements ChatClient {
     private readonly baseUrl: string;
 
     constructor(baseUrl: string) {
         this.baseUrl = baseUrl;
+    }
+
+    async getChatSessions(): Promise<ChatSession[]> {
+        // GET /chat/
+        const method = 'GET'
+        const url = `${this.baseUrl}/chat/`
+
+        const res = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' }
+        })
+
+        if (!res.ok) {
+            throw new Error(`Failed to fetch chat sessions: ${res.status} ${res.statusText}`)
+        }
+
+        const txt = await res.text()
+        const parsed = JSON.parse(txt)
+
+        return parsed as ChatSession[]
     }
 
     async newChat(): Promise<NewChatResponse> {

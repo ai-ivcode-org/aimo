@@ -7,7 +7,7 @@ import SideDrawer from "./components/side-drawer/SideDrawer";
 
 export default function App() {
   const chatRef = useRef<ChatHandle | null>(null)
-  const controller = useMemo(() => new ChatController('http://localhost:8080'), [])
+  const controller = useMemo(() => new ChatController(), [])
 
   useEffect(() => {
     controller.attach(chatRef)

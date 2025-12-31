@@ -7,7 +7,7 @@ import CssBaseline from '@mui/material/CssBaseline'
 import ThemeCssVars from './theme/ThemeCssVars'
 import makeTheme from './theme/makeTheme'
 
-const theme = makeTheme('light')
+const theme = makeTheme(window.matchMedia("(prefers-color-scheme: dark)").matches ? 'dark' : 'light')
 
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

@@ -1,19 +1,15 @@
 // typescript
-import {ChatClientFactory} from '../chat-client/ChatClient'
-import {ChatMessage, ChatRequest, ChatClient} from '../chat-client/ChatClient'
+import {ChatMessage, ChatRequest, chatClient} from '../chat-client/ChatClient'
 import type {ChatHandle} from '../../components/chat/Chat'
 import React from "react";
 import {ChatSessionSingleton} from "./ChatSession";
+import { historyService } from "../history-service/HistoryService";
 
 export class ChatController {
-    private readonly client: ChatClient = ChatClientFactory('')
     private chatHandle?: React.RefObject<ChatHandle> | null
 
     private unsubscribeSessionChange: () => void | null = null
 
-    constructor(baseUrl?: string) {
-        if (baseUrl) this.client = ChatClientFactory(baseUrl)
-    }
 
     attach(chatHandle: React.RefObject<ChatHandle>) {
         if(this.chatHandle) {
@@ -26,15 +22,17 @@ export class ChatController {
         this.chatHandle = chatHandle
         this.unsubscribeSessionChange = ChatSessionSingleton.onChange(async (id: string | null) => {
             if (!id) {
-                return
-            }
+                this.chatHandle?.current?.setMessages([])
+            } else {
+                const enableInput = this.chatHandle?.current?.disableInput()
+                try {
+                    const messages = await chatClient.history(id)
+                    this.chatHandle?.current?.setMessages(messages)
 
-            const enableInput = this.chatHandle?.current?.disableInput()
-            try {
-                const messages = await this.client.history(id)
-                this.chatHandle?.current?.setMessages(messages)
-            } finally {
-                enableInput()
+                    void historyService.fetchHistory()
+                } finally {
+                    enableInput()
+                }
             }
         })
     }
@@ -58,7 +56,7 @@ export class ChatController {
     onSend = async (userMsg: ChatMessage): Promise<ChatMessage | undefined> => {
         let id = ChatSessionSingleton.id
         if(!id) {
-            const newChat = await this.client.newChat()
+            const newChat = await chatClient.newChat()
 
             // TODO: I need all listeners to finish before proceeding
             id = await ChatSessionSingleton.setId(newChat.chatId)
@@ -73,7 +71,7 @@ export class ChatController {
             const unsetBusy = this.chatHandle?.current?.busy()
             const enableInput = this.chatHandle?.current?.disableInput()
             try {
-                return await this.client.chat(id, reqFallback)
+                return await chatClient.chat(id, reqFallback)
             } catch {
                 return undefined
             } finally {
@@ -88,7 +86,7 @@ export class ChatController {
         const enableInput = this.chatHandle?.current?.disableInput()
         try {
             // always append incoming chunks to the placeholder message we created above
-            return await this.client.chat(id, req, {
+            return await chatClient.chat(id, req, {
                 onMessage: (ev: ChatMessage) => {
                     unsetBusy()
 

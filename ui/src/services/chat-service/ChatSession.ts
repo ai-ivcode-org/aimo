@@ -34,9 +34,14 @@ export class ChatSession {
         const newId = id ?? (typeof crypto !== 'undefined' && 'randomUUID' in crypto
             ? (crypto as any).randomUUID()
             : `${Date.now()}-${Math.random().toString(36).slice(2)}`)
-        this.currentChatId = newId
-        this.updateUrl(newId, push)
-        await this.emitChange()
+
+        // only proceed if the id has changed
+        if(newId !== this.currentChatId) {
+            this.currentChatId = newId
+            this.updateUrl(newId, push)
+            await this.emitChange()
+        }
+
         return newId
     }
 

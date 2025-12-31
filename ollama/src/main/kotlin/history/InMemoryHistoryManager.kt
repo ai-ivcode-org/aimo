@@ -4,7 +4,9 @@ import java.util.*
 
 class InMemoryHistoryManager (
     override val id: UUID = UUID.randomUUID(),
+    override var title: String? = null,
 ) : OllamaHistoryManager {
+
     private val history = mutableListOf<ChatMessage>()
 
     override fun getMessages(): List<ChatMessage> {

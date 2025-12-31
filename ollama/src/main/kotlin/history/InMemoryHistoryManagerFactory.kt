@@ -5,6 +5,13 @@ import java.util.UUID
 class InMemoryHistoryManagerFactory: OllamaHistoryManagerFactory {
     private val history: MutableMap<UUID, OllamaHistoryManager> = mutableMapOf()
 
+    override fun getChatSessionInfos() = history.values.map {
+        OllamaChatSessionInfo (
+            id = it.id,
+            title = it.title
+        )
+    }
+
     override fun createHistoryManager(id: UUID?): OllamaHistoryManager {
         if(id != null) {
             val existing = history[id]
