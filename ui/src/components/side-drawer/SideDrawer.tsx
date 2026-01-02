@@ -1,26 +1,32 @@
-import * as React from 'react';
-import { styled, useTheme, Theme, CSSObject } from '@mui/material/styles';
-import Box from '@mui/material/Box';
-import MuiDrawer from '@mui/material/Drawer';
-import MuiAppBar, { AppBarProps as MuiAppBarProps } from '@mui/material/AppBar';
-import Toolbar from '@mui/material/Toolbar';
-import List from '@mui/material/List';
-import CssBaseline from '@mui/material/CssBaseline';
-import Typography from '@mui/material/Typography';
-import Divider from '@mui/material/Divider';
-import IconButton from '@mui/material/IconButton';
-import MenuIcon from '@mui/icons-material/Menu';
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import ListItemButton from '@mui/material/ListItemButton';
-import ListItemIcon from '@mui/material/ListItemIcon';
-import ListItemText from '@mui/material/ListItemText';
-import TryIcon from '@mui/icons-material/Try';
-import HistoryIcon from '@mui/icons-material/History';
-import {Collapse, Tooltip} from "@mui/material";
-import { historyService, HistoryEntry } from "../../services/history-service/HistoryService";
-import { ChatSessionSingleton } from '../../services/chat-service/ChatSession';
-import {useEffect} from "react";
+import React, {useEffect} from 'react';
+
+import {
+    AppBar as MuiAppBar,
+    AppBarProps as MuiAppBarProps,
+    Box,
+    CssBaseline,
+    Divider,
+    Drawer as MuiDrawer,
+    IconButton,
+    List,
+    ListItemButton,
+    ListItemIcon,
+    ListItemText,
+    Toolbar,
+    Tooltip,
+    Typography
+} from "@mui/material";
+
+import {
+    ChevronLeft as ChevronLeftIcon,
+    ChevronRight as ChevronRightIcon,
+    Menu as MenuIcon,
+    Try as TryIcon
+} from '@mui/icons-material'
+
+import {CSSObject, styled, Theme, useTheme} from '@mui/material/styles';
+import {chatSession} from '../../services/chat-session-service/ChatSession';
+import ChatSessionList from "./chat-session-list/ChatSessionList";
 
 const drawerWidth = 260;
 
@@ -113,21 +119,6 @@ export default function SideDrawer({ children }: SideDrawerProps) {
     const theme = useTheme();
 
     const [open, setOpen] = React.useState(false);
-    const [historyOpen, setHistoryOpen] = React.useState(false);
-    const [sessionId, setSessionId] = React.useState<string | null>( ChatSessionSingleton.id );
-
-    const [historyItems, setHistoryItems] = React.useState<HistoryEntry[]>([]);
-
-    useEffect(() => {
-        return historyService.subscribe( items => {
-            setHistoryItems(items);
-        })
-    }, []);
-    useEffect(() => {
-        return ChatSessionSingleton.onChange(async (id: string | null) => {
-            setSessionId(id);
-        })
-    }, []);
 
     const handleDrawerOpen = () => {
         setOpen(true);
@@ -174,7 +165,7 @@ export default function SideDrawer({ children }: SideDrawerProps) {
                     aria-labelledby="nested-list-subheader"
                 >
                     <Tooltip title={"New Chat"} placement="right" disableHoverListener={open} disableFocusListener={open}>
-                        <ListItemButton onClick={ async () => { await ChatSessionSingleton.clear(false) } }>
+                        <ListItemButton onClick={ async () => { await chatSession.clear(false) } }>
                             <ListItemIcon>
                                 <TryIcon />
                             </ListItemIcon>
@@ -183,48 +174,10 @@ export default function SideDrawer({ children }: SideDrawerProps) {
                     </Tooltip>
                 </List>
                 <Divider />
-                <List
-                    sx={{ width: '100%', maxWidth: 360, bgcolor: 'background.paper' }}
-                    component="nav"
-                    aria-labelledby="nested-list-subheader"
-                >
-                    { open ? (
-                        <ListItemButton onClick={() => {
-                            setHistoryOpen(!historyOpen)
-                        }}>
-                            <ListItemIcon>
-                                <HistoryIcon />
-                            </ListItemIcon>
-                            <ListItemText primary="History" />
-                        </ListItemButton>
-                    ) : (
-                        <Tooltip title={"History"} placement="right">
-                            <ListItemButton onClick={() => {
-                                setOpen(true);
-                                setHistoryOpen(true);
-                            }}>
-                                <ListItemIcon>
-                                    <HistoryIcon />
-                                </ListItemIcon>
-                                <ListItemText primary="History" />
-                            </ListItemButton>
-                        </Tooltip>
-                    )}
-                    <Collapse in={open && historyOpen} timeout="auto" unmountOnExit>
-                        {historyItems.map(item => (
-                            <ListItemButton
-                                key={item.id}
-                                sx={{ pl: 2 }}
-                                onClick={ async () => { await ChatSessionSingleton.setId(item.id, false) } }
-                                selected={sessionId === item.id}
-                            >
-                                <ListItemText
-                                    primary={item.title ?? `Item ${item.id}`}
-                                />
-                            </ListItemButton>
-                        ))}
-                    </Collapse>
-                </List>
+                <ChatSessionList
+                    drawerOpen={open}
+                    onOpenDrawer = {() => { setOpen(true); }}
+                />
             </Drawer>
             <Box component="main" sx={{ flexGrow: 1, p: 0}} >
                 {children}

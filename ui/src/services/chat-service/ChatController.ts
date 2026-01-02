@@ -1,8 +1,7 @@
-// typescript
 import {ChatMessage, ChatRequest, chatClient} from '../chat-client/ChatClient'
 import type {ChatHandle} from '../../components/chat/Chat'
 import React from "react";
-import {ChatSessionSingleton} from "./ChatSession";
+import {chatSession} from "../chat-session-service/ChatSession";
 import { historyService } from "../history-service/HistoryService";
 
 export class ChatController {
@@ -20,7 +19,7 @@ export class ChatController {
         }
 
         this.chatHandle = chatHandle
-        this.unsubscribeSessionChange = ChatSessionSingleton.onChange(async (id: string | null) => {
+        this.unsubscribeSessionChange = chatSession.onChange(async (id: string | null) => {
             if (!id) {
                 this.chatHandle?.current?.setMessages([])
             } else {
@@ -54,12 +53,12 @@ export class ChatController {
      * - appends streamed chunks to the placeholder via the Chat imperative API.
      */
     onSend = async (userMsg: ChatMessage): Promise<ChatMessage | undefined> => {
-        let id = ChatSessionSingleton.id
+        let id = chatSession.id
         if(!id) {
             const newChat = await chatClient.newChat()
 
             // TODO: I need all listeners to finish before proceeding
-            id = await ChatSessionSingleton.setId(newChat.chatId)
+            id = await chatSession.setId(newChat.chatId)
             this.chatHandle?.current?.addMessage(userMsg)
         }
 

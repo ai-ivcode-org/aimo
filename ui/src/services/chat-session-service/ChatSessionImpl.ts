@@ -1,24 +1,19 @@
-// typescript
-export class ChatSession {
+import {ChatSession} from "./ChatSession";
 
-    private static _instance: ChatSession = new ChatSession()
+export class ChatSessionImpl implements ChatSession {
 
     private currentChatId: string | null = null
     private listeners = new Set<(id: string | null) => Promise<void>>()
     private readonly paramName = 'chatId'
     private readonly supportsHistory = typeof window !== 'undefined' && typeof window.history !== 'undefined'
 
-    private constructor() {
+    constructor() {
         // initialize from URL if available
         if (typeof window !== 'undefined') {
             const url = new URL(window.location.href)
             const id = url.searchParams.get(this.paramName)
             if (id) this.currentChatId = id
         }
-    }
-
-    static get instance(): ChatSession {
-        return ChatSession._instance
     }
 
     get id(): string | null {
@@ -82,5 +77,3 @@ export class ChatSession {
         }
     }
 }
-
-export const ChatSessionSingleton = ChatSession.instance
