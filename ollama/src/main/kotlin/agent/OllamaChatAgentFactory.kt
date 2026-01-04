@@ -7,4 +7,5 @@ interface OllamaChatAgentFactory {
     fun getChatSessionInfos(): List<OllamaChatSessionInfo>
     fun createOllamaSession(): OllamaChatAgent
     fun createOllamaSession(historyId: UUID): OllamaChatAgent?
+    fun deleteOllamaSession(historyId: UUID): Boolean
 }

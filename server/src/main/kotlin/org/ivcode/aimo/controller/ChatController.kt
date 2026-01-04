@@ -53,19 +53,8 @@ class ChatController (
             .body(body)
     }
 
-    @PostMapping("/new")
-    fun createChat (
-    ): NewChatResponse {
-        return NewChatResponse(
-            chatId = chatService.createChat().toString()
-        )
-    }
-
-    @GetMapping("/")
-    fun getChatSessions (): List<ChatSession> = chatService.getSessions()
-
-    @GetMapping("/{chatId}/history")
-    fun getHistory (
+    @GetMapping("/{chatId}")
+    fun getChatHistory (
         @PathVariable chatId: UUID
     ): List<ChatMessage> {
         return chatService.history(chatId)

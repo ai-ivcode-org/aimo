@@ -12,6 +12,10 @@ class InMemoryHistoryManagerFactory: OllamaHistoryManagerFactory {
         )
     }
 
+    override fun deleteChatSession(id: UUID): Boolean {
+        return history.remove(id) != null
+    }
+
     override fun createHistoryManager(id: UUID?): OllamaHistoryManager {
         if(id != null) {
             val existing = history[id]

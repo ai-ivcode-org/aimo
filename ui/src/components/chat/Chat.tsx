@@ -130,8 +130,6 @@ const Chat = React.forwardRef<ChatHandle, ChatProps>(function Chat({onSend, init
     const [inputEnabled, setInputEnabled] = useState(true);
     const [busy, setBusy] = useState(false);
 
-    var latestEnabled = inputEnabled;
-
     /** Ref to the messages container for scrolling */
     const containerRef = useRef<HTMLDivElement | null>(null)
 

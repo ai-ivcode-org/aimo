@@ -3,6 +3,7 @@ package org.ivcode.aimo.service
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.github.ollama4j.models.chat.OllamaChatMessageRole
 import org.ivcode.ai.ollama.agent.OllamaChatAgentFactory
+import org.ivcode.aimo.exceptions.NotFoundException
 import org.ivcode.aimo.model.ChatMessage
 import org.ivcode.aimo.model.ChatRequest
 import org.ivcode.aimo.model.ChatSession
@@ -20,9 +21,27 @@ class ChatService(
 
     fun getSessions (): List<ChatSession> = ollamaSessionFactory.getChatSessionInfos().map { info ->
         ChatSession (
-            id = info.id,
+            chatId = info.id,
             title = info.title,
         )
+    }
+
+    fun updateChatSession (
+        chatId: UUID,
+        title: String?
+    ) {
+        val session = ollamaSessionFactory.createOllamaSession(chatId) ?: throw NotFoundException()
+        if(title != null) {
+            session.setSessionTitle(title)
+        }
+    }
+
+    fun deleteSession (
+        chatId: UUID
+    ) {
+        if(!ollamaSessionFactory.deleteOllamaSession(chatId)) {
+            throw NotFoundException()
+        }
     }
 
     fun chat (
@@ -58,6 +77,9 @@ class ChatService(
     fun history (
         chatId: UUID
     ): List<ChatMessage> {
+        if(!sessionExists(chatId)) {
+            throw NotFoundException()
+        }
         val session = ollamaSessionFactory.createOllamaSession(chatId) ?: throw IllegalStateException("Failed to create Ollama chat session")
 
         return session.getChatHistory().mapIndexed { index, msg ->

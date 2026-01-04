@@ -42,4 +42,8 @@ class Ollama4jChatAgentFactory (
             systemMessages = systemMessages,
         )
     }
+
+    override fun deleteOllamaSession(historyId: UUID): Boolean {
+        return historyManagerFactory.deleteChatSession(historyId)
+    }
 }

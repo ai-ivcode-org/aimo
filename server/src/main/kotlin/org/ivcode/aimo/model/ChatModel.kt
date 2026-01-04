@@ -28,6 +28,10 @@ data class ChatMessage (
 }
 
 data class ChatSession (
-    val id: UUID,
+    val chatId: UUID,
     val title: String?
+)
+
+data class ChatSessionUpdateRequest (
+    val title: String
 )

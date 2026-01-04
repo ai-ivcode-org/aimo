@@ -51,8 +51,12 @@ export interface ChatMessage {
 }
 
 export interface ChatSession {
-    id: string
+    chatId: string
     title?: string
+}
+
+export interface ChatSessionUpdateRequest {
+    title: string
 }
 
 
@@ -77,15 +81,17 @@ export interface Callback {
  *  - history: retrieve the message history for a chat session
  *
  * @interface ChatClient
- * @property {() => Promise<NewChatResponse>} newChat - Create a new chat session. Resolves with NewChatResponse containing chatId.
+ * @property {() => Promise<NewChatResponse>} createChat - Create a new chat session. Resolves with NewChatResponse containing chatId.
  * @property {(chatId: string, request: ChatRequest, callback?: Callback) => Promise<ChatMessage>} chat - Send a ChatRequest and optionally receive streaming updates via callback.
- * @property {(chatId: string) => Promise<ChatMessage[]>} history - Fetch the message history for chatId.
+ * @property {(chatId: string) => Promise<ChatMessage[]>} getChatHistory - Fetch the message history for chatId.
  */
 export interface ChatClient {
-    newChat: () => Promise<NewChatResponse>
     chat: (chatId: string, request: ChatRequest, callback?: Callback) => Promise<ChatMessage>
-    history: (chatId: string) => Promise<ChatMessage[]>
+    getChatHistory: (chatId: string) => Promise<ChatMessage[]>
+    createChatSession: () => Promise<NewChatResponse>
     getChatSessions: () => Promise<ChatSession[]>
+    updateChatSession: (chatId: string, request: ChatSessionUpdateRequest) => Promise<void>
+    deleteChatSession: (chatId: string) => Promise<void>
 }
 
 // TODO make the baseUrl configurable

@@ -21,5 +21,7 @@ interface OllamaChatAgent {
     fun chat(message: String, tokenHandler: OllamaChatTokenHandler? = null): OllamaChatResult
 
     fun getSessionId(): UUID
+    fun getSessionTitle(): String?
+    fun setSessionTitle(title: String)
     fun getChatHistory(): List<ChatMessage>
 }

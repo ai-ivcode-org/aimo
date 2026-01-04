@@ -1,71 +1,22 @@
-import {Callback, ChatClient, ChatRequest, ChatMessage, NewChatResponse, ChatSession} from "./ChatClient";
+import {Callback, ChatClient, ChatRequest, ChatMessage, NewChatResponse, ChatSession, ChatSessionUpdateRequest} from "./ChatClient";
+import { alertService } from "../alert-service/AlertService";
+
+const CHAT = "/chat"
+const CHAT_SESSION = "/chat-session"
 
 export class ChatClientImpl implements ChatClient {
     private readonly baseUrl: string;
 
     constructor(baseUrl: string) {
-        this.baseUrl = baseUrl;
+        // remove trailing slash(es) if present
+        this.baseUrl = baseUrl.replace(/\/+$/, '');
     }
 
-    async getChatSessions(): Promise<ChatSession[]> {
-        // GET /chat/
-        const method = 'GET'
-        const url = `${this.baseUrl}/chat/`
-
-        const res = await fetch(url, {
-            method: method,
-            headers: { 'Content-Type': 'application/json' }
-        })
-
-        if (!res.ok) {
-            throw new Error(`Failed to fetch chat sessions: ${res.status} ${res.statusText}`)
-        }
-
-        const txt = await res.text()
-        const parsed = JSON.parse(txt)
-
-        return parsed as ChatSession[]
-    }
-
-    async newChat(): Promise<NewChatResponse> {
-        // POST /chat/new
-        const method = 'POST'
-        const url = `${this.baseUrl}/chat/new`
-
-        const res = await fetch(url, {
-            method: method,
-            headers: { 'Content-Type': 'application/json' }
-        })
-
-        if(!res.ok) {
-            throw new Error(`Failed to create new chat: ${res.status} ${res.statusText}`)
-        }
-
-        const txt = await res.text()
-        const parsed = JSON.parse(txt)
-
-        return parsed as NewChatResponse
-    }
-
-    async chat(
+    chat = (
         chatId: string,
         request: ChatRequest,
         callback?: Callback
-    ): Promise<ChatMessage> {
-        // POST /chat/{chatId}
-        const method = 'POST'
-        const url = `${this.baseUrl}/chat/${chatId}`
-
-        if(!chatId) {
-            throw new Error('chatId is required')
-        }
-
-        const res = await fetch(url, {
-            method: method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(request)
-        })
-
+    ) => this.POST(CHAT, `/${chatId}`, { 'Content-Type': 'application/json' }, request).then(async res => {
         if (!res.body) {
             // No stream support; try to parse whole body as JSON
             const txt = await res.text()
@@ -165,26 +116,104 @@ export class ChatClientImpl implements ChatClient {
         }
 
         return lastEvent
-    }
+    })
 
-    async history(
+    getChatHistory = (
         chatId: string
-    ): Promise<ChatMessage[]> {
-        // GET /chat/{chatId}/history
-        const method = 'GET'
-        const url = `${this.baseUrl}/chat/${chatId}/history`
-
-        const res = await fetch(url, {
-            method: method,
-            headers: { 'Content-Type': 'application/json' }
-        })
-
+    ) => this.GET(CHAT, `/${chatId}`).then(async res => {
         if(!res.ok) {
-            throw new Error(`Failed to fetch chat history: ${res.status} ${res.statusText}`)
+            let msg: string = ''
+            if(res.status === 404) {
+                // no history yet
+                msg = `Chat session not found: ${chatId}`
+            } else {
+                msg = `Failed to fetch chat history: ${res.status} ${res.statusText}`
+            }
+            alertService.error(msg)
+            throw new Error(msg)
         }
 
         const txt = await res.text()
         const parsed = JSON.parse(txt)
         return parsed as ChatMessage[]
+    })
+
+    createChatSession = () => this.POST(CHAT_SESSION, "/").then(async res => {
+        if(!res.ok) {
+            throw new Error(`Failed to create new chat: ${res.status} ${res.statusText}`)
+        }
+
+        const txt = await res.text()
+        const parsed = JSON.parse(txt)
+
+        return parsed as NewChatResponse
+    })
+
+    getChatSessions = () => this.GET(CHAT_SESSION, "/").then(async res => {
+        const txt = await res.text()
+        const parsed = JSON.parse(txt)
+
+        return parsed as ChatSession[]
+    })
+
+    updateChatSession = (
+        chatId: string,
+        request: ChatSessionUpdateRequest
+    ) => this.POST(CHAT_SESSION, `/${chatId}`, undefined, request).then(async res => {
+        if(!res.ok) {
+            throw new Error(`Failed to fetch chat history: ${res.status} ${res.statusText}`)
+        }
+    })
+    deleteChatSession = (
+        chatId: string
+    ) => this.DELETE(CHAT_SESSION, `/${chatId}`).then(async res => {
+        if(!res.ok) {
+            throw new Error(`Failed to fetch chat history: ${res.status} ${res.statusText}`)
+        }
+    })
+
+
+    private createUrl(controller: string, path: string): string {
+        return `${this.baseUrl}${controller}${path}`;
+    }
+
+    private async POST (
+        controller: string,
+        path: string,
+        headers?: HeadersInit,
+        body?: any
+    ): Promise<Response> {
+        return this.request('POST', controller, path, headers, JSON.stringify(body))
+    }
+
+    private async GET (
+        controller: string,
+        path: string,
+        headers?: HeadersInit
+    ): Promise<Response> {
+        return this.request('GET', controller, path, headers)
+    }
+
+    private async DELETE (
+        controller: string,
+        path: string,
+        headers?: HeadersInit
+    ): Promise<Response> {
+        return this.request('DELETE', controller, path, headers)
+    }
+
+    private async request (
+        method: string,
+        controller: string,
+        path: string,
+        headers?: HeadersInit,
+        body?: BodyInit
+    ): Promise<Response> {
+        const url = this.createUrl(controller, path)
+        return fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json', ...headers },
+            body: body
+        })
     }
 }

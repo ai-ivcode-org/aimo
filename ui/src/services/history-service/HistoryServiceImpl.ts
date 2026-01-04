@@ -10,7 +10,7 @@ export class HistoryServiceImpl implements HistoryService {
         const sessions = await chatClient.getChatSessions()
         const hist = sessions.map((session: ChatSession) => {
             return {
-                id: session.id,
+                id: session.chatId,
                 title: session.title ? session.title : "New Chat",
             } as HistoryEntry
         })

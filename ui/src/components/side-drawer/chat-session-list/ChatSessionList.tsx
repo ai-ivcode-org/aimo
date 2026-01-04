@@ -3,6 +3,7 @@ import {chatSession} from "../../../services/chat-session-service/ChatSession";
 import {HistoryEntry, historyService} from "../../../services/history-service/HistoryService";
 import {Button, ButtonGroup, Collapse, List, ListItemButton, ListItemIcon, ListItemText, Tooltip} from "@mui/material";
 import {History as HistoryIcon, DeleteForever as DeleteForeverIcon, Edit as EditIcon} from "@mui/icons-material";
+import {chatClient} from "../../../services/chat-client/ChatClient";
 
 export interface ChatSessionListProps {
     drawerOpen?: boolean;
@@ -27,6 +28,15 @@ export default function ChatSessionList(props: ChatSessionListProps) {
             setSessionId(id);
         })
     }, []);
+
+    const onDeleteSession = async (id: string) => {
+        await chatClient.deleteChatSession(id);
+        void historyService.fetchHistory()
+
+        if(sessionId === id) {
+            await chatSession.clear(false)
+        }
+    }
 
     return (
         <List
@@ -86,23 +96,38 @@ export default function ChatSessionList(props: ChatSessionListProps) {
                                 fullWidth={false}
                             >
                                 <Tooltip title={"Edit Title"} placement="top" enterDelay={500}>
-                                    <Button size="small" style={{
-                                        minWidth: "30px",
-                                        border: 'none',
-                                        margin: 0,
-                                        opacity: "65%"
-                                    }}>
+                                    <Button
+                                        size="small"
+                                        style={{
+                                            minWidth: "30px",
+                                            border: 'none',
+                                            margin: 0,
+                                            opacity: "65%"
+                                        }}
+                                        onClick={async (e: React.MouseEvent<HTMLButtonElement>) => {
+                                            e.stopPropagation();
+                                            e.preventDefault();
+                                        }}
+                                    >
                                         <EditIcon/>
                                     </Button>
                                 </Tooltip>
 
                                 <Tooltip title={"Delete"} placement="top" enterDelay={500} >
-                                    <Button size="small" style={{
-                                        minWidth: "30px",
-                                        border: 'none',
-                                        margin: 0,
-                                        opacity: "65%"
-                                    }}>
+                                    <Button
+                                        size="small"
+                                        style={{
+                                            minWidth: "30px",
+                                            border: 'none',
+                                            margin: 0,
+                                            opacity: "65%"
+                                        }}
+                                        onClick={async (e: React.MouseEvent<HTMLButtonElement>) => {
+                                            e.stopPropagation();
+                                            e.preventDefault();
+                                            await onDeleteSession(item.id);
+                                        }}
+                                    >
                                         <DeleteForeverIcon/>
                                     </Button>
                                 </Tooltip>

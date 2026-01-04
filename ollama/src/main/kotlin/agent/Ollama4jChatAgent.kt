@@ -46,6 +46,14 @@ class Ollama4jChatAgent(
         return historyManager.id
     }
 
+    override fun getSessionTitle(): String? {
+        return historyManager.title
+    }
+
+    override fun setSessionTitle(title: String) {
+        historyManager.title = title
+    }
+
     override fun getChatHistory(): List<ChatMessage> {
         return historyManager.getMessages()
     }

@@ -3,6 +3,7 @@ import type {ChatHandle} from '../../components/chat/Chat'
 import React from "react";
 import {chatSession} from "../chat-session-service/ChatSession";
 import { historyService } from "../history-service/HistoryService";
+import { alertService } from "../alert-service/AlertService";
 
 export class ChatController {
     private chatHandle?: React.RefObject<ChatHandle> | null
@@ -25,10 +26,13 @@ export class ChatController {
             } else {
                 const enableInput = this.chatHandle?.current?.disableInput()
                 try {
-                    const messages = await chatClient.history(id)
+                    const messages = await chatClient.getChatHistory(id)
                     this.chatHandle?.current?.setMessages(messages)
 
                     void historyService.fetchHistory()
+                } catch (error) {
+                    void chatSession.clear(false)
+                    throw error
                 } finally {
                     enableInput()
                 }
@@ -55,7 +59,7 @@ export class ChatController {
     onSend = async (userMsg: ChatMessage): Promise<ChatMessage | undefined> => {
         let id = chatSession.id
         if(!id) {
-            const newChat = await chatClient.newChat()
+            const newChat = await chatClient.createChatSession()
 
             // TODO: I need all listeners to finish before proceeding
             id = await chatSession.setId(newChat.chatId)
