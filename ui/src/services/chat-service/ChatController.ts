@@ -3,7 +3,6 @@ import type {ChatHandle} from '../../components/chat/Chat'
 import React from "react";
 import {chatSession} from "../chat-session-service/ChatSession";
 import { historyService } from "../history-service/HistoryService";
-import { alertService } from "../alert-service/AlertService";
 
 export class ChatController {
     private chatHandle?: React.RefObject<ChatHandle> | null
