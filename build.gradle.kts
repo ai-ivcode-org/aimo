@@ -11,10 +11,16 @@ allprojects {
     version = rootProject.version
 }
 
+val jacksonVersion = "2.15.2"
+
 val defaultVersions = mapOf(
     // central map of group:artifact -> version
     // populate this from your version catalog or BOM as needed
     "org.ivcode:spring-boot-starter-ollama" to "0.1-SNAPSHOT",
+    "com.fasterxml.jackson.module:jackson-module-kotlin" to jacksonVersion,
+    "com.fasterxml.jackson.core:jackson-databind" to jacksonVersion,
+    "com.fasterxml.jackson.core:jackson-core" to jacksonVersion,
+    "com.fasterxml.jackson.core:jackson-annotations" to jacksonVersion,
 )
 
 subprojects {

@@ -23,6 +23,7 @@ dependencies {
 
     implementation(project(":ui"))
     implementation(project(":ollama"))
+    implementation(project(":aimo-core"))
 }
 
 tasks.test {

@@ -8,6 +8,9 @@ pluginManagement {
 
 rootProject.name = "aimo"
 
-include(":ui")
-include(":ollama")
-include(":server")
+//include(":ui")
+//include(":ollama")
+//include(":server")
+include(":aimo-core")
+//include(":aimo-core-starter")
+include(":aimo-ollama")
